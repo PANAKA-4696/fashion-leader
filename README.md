@@ -31,7 +31,7 @@ wsl --install
 
 ### 1-2. Docker Desktop のインストール
 
-1. Docker公式サイトから Download for Windows を選択  
+1. [Docker公式サイト](https://www.docker.com/products/docker-desktop/)から Download for Windows を選択  
 2. インストーラーを起動し、すべてデフォルト設定のままインストール  
 3. インストール完了後、Docker Desktop を起動  
 
