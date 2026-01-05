@@ -1,59 +1,134 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 👕 Webアプリ開発環境 セットアップ手順（Windows）
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+本手順書は、チーム開発に必要なWebアプリ開発環境をWindows上に構築するためのガイドです。
+以下の手順通りに進めれば、全員が同じ開発環境を構築できます。
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🛠 手順1：PCの準備（WSL2 と Docker）
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 1-1. Ubuntu（WSL2）のインストール
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Windows上でLinux環境を動かすために WSL2 を使用します。
 
-## Learning Laravel
+1. Windowsのスタートボタンを右クリック  
+2. 「ターミナル（管理者）」または「PowerShell（管理者）」を起動  
+3. 以下のコマンドを実行します
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```powershell
+wsl --install
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+4. 処理完了後、必ずPCを再起動してください  
+5. 再起動後、自動的に Ubuntu（黒い画面）が起動します  
+6. 以下を順に入力します  
+   - Enter new UNIX username: → 任意のユーザー名（英数字）  
+   - New password: → パスワード  
 
-## Laravel Sponsors
+※ パスワード入力時は画面に何も表示されませんが、正常に入力されています。
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+### 1-2. Docker Desktop のインストール
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+1. [Docker公式サイト](https://www.docker.com/products/docker-desktop/)から Download for Windows を選択  
+2. インストーラーを起動し、すべてデフォルト設定のままインストール  
+3. インストール完了後、Docker Desktop を起動  
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 1-3. Docker と Ubuntu（WSL）の連携（重要）
 
-## Code of Conduct
+1. Docker Desktop を起動  
+2. 右上の Settings（歯車）をクリック  
+3. Resources → WSL Integration を選択  
+4. 以下を確認  
+   - Enable integration with my default WSL distro にチェック  
+   - Ubuntu のスイッチが ON（青）  
+5. Apply & Restart をクリック  
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🚀 手順2：プロジェクトのダウンロードと起動
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+※ ここからは Ubuntu（黒い画面）を使用します
 
-## License
+### 2-1. プロジェクトの取得（Git Clone）
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+git clone https://github.com/PANAKA-4696/fashion-leader.git
+cd fashion-leader
+```
+
+---
+
+### 2-2. ライブラリのインストール（初回のみ）
+
+```bash
+docker run --rm -u "$(id -u):$(id -g)" \
+  -v "$(pwd):/var/www/html" \
+  -w /var/www/html \
+  laravelsail/php82-composer:latest \
+  composer install --ignore-platform-reqs
+```
+
+---
+
+### 2-3. 設定ファイルの準備
+
+```bash
+cp .env.example .env
+```
+
+---
+
+### 2-4. アプリケーションの起動
+
+```bash
+./vendor/bin/sail up -d
+```
+
+---
+
+### 2-5. 初期設定（キー生成 & DB構築）
+
+```bash
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate
+```
+
+---
+
+## ✅ 手順3：動作確認
+
+ブラウザで以下にアクセスします。
+
+```
+http://localhost
+```
+
+Laravelのトップページが表示されれば成功です。
+
+---
+
+## 📝 開発の進め方メモ
+
+### 開発を始めるとき
+
+```bash
+./vendor/bin/sail up -d
+```
+
+### 開発を終わるとき
+
+```bash
+./vendor/bin/sail stop
+```
+
+### VSCodeで編集する場合
+
+```bash
+code .
+```
+
+Ubuntu上で実行すると Windows 側の VSCode が起動します。
