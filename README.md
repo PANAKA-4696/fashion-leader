@@ -132,3 +132,6 @@ code .
 ```
 
 Ubuntu上で実行すると Windows 側の VSCode が起動します。
+
+くく
+
