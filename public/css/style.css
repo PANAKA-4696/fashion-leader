@@ -1,0 +1,488 @@
+/* === style.css === */
+
+/* --- 0. 基本設定 --- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans CJK JP", "Helvetica Neue", Arial, sans-serif;
+    background-color: #f4f7f6; /* わずかにグレーな背景 */
+    color: #333; /* 基本の文字色 (黒) */
+    margin: 0;
+    padding: 0;
+}
+/* ... (以下、前回のCSSコードと同一) ... */
+/* --- 1. レイアウト --- */
+.container {
+    max-width: 960px;
+    margin: 20px auto;
+    padding: 20px 30px;
+    background-color: #ffffff; /* 白基調 */
+    border: 1px solid #e0e0e0; /* グレーの境界線 */
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+/* ログイン/登録用の小さなコンテナ */
+.small-container {
+    max-width: 420px;
+    margin: 50px auto;
+    padding: 40px;
+    text-align: center;
+}
+/* ヘッダーナビゲーション */
+.header-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: #333; /* 濃いグレー */
+    color: white;
+}
+.header-nav h1 {
+    color: white;
+    border: none;
+    margin: 0;
+    font-size: 20px;
+}
+.header-nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 15px;
+    font-weight: 500;
+}
+.header-nav a:hover {
+    text-decoration: underline;
+}
+/* --- 2. タイポグラフィ --- */
+h1, h2, h3 {
+    color: #111; /* 黒 */
+    margin-top: 0;
+    padding-bottom: 10px;
+}
+h1 {
+    font-size: 24px;
+    border-bottom: 2px solid #f0f0f0; /* グレーの薄い下線 */
+}
+h2 {
+    font-size: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+h3 {
+    font-size: 18px;
+    border-bottom: none;
+}
+p {
+    line-height: 1.6;
+}
+a {
+    color: #c62828; /* 赤 (重要色) */
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+hr {
+    border: 0; 
+    border-top: 1px solid #eee; 
+    margin: 20px 0;
+}
+/* --- 3. ボタン --- */
+.button,
+button,
+input[type="submit"] {
+    display: inline-block;
+    padding: 12px 20px;
+    margin: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #555; /* 基本のグレー */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    width: auto; /* デフォルトは自動幅 */
+}
+.button:hover,
+button:hover,
+input[type="submit"]:hover {
+    background-color: #333; /* 濃いグレー */
+}
+/* 幅100%ボタン */
+.button-full,
+button.full,
+input[type="submit"].full {
+    width: 100%;
+    box-sizing: border-box; /* paddingを含めて100%にする */
+}
+/* 赤いボタン (重要・決定) */
+.button-primary,
+button.primary,
+input[type="submit"].primary {
+    background-color: #c62828; /* 赤 */
+}
+.button-primary:hover,
+button.primary:hover,
+input[type="submit"].primary:hover {
+    background-color: #a32020; /* 濃い赤 */
+}
+/* 赤いボタン (削除・危険) */
+.button-danger,
+button.danger,
+input[type="submit"].danger {
+    background-color: #e53935; /* 少し明るい赤 */
+}
+.button-danger:hover,
+button.danger:hover,
+input[type="submit"].danger:hover {
+    background-color: #c62828;
+}
+/* リンク風ボタン */
+.button-link {
+    background: none;
+    border: none;
+    color: #c62828;
+    padding: 0;
+    margin: 15px 0;
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+}
+/* --- 4. フォーム --- */
+form {
+    text-align: left;
+}
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="file"],
+select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc; /* グレー */
+    border-radius: 4px;
+    font-size: 16px;
+    box-sizing: border-box; /* paddingを含めて100%にする */
+}
+/* --- 5. タグ (closet_add.html など) --- */
+.tag-container {
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid #ccc; /* グレー */
+    min-height: 50px;
+    background-color: #f9f9f9;
+}
+.tag {
+    display: inline-block;
+    background-color: #e0e0e0; /* グレー */
+    padding: 5px 10px;
+    margin: 3px;
+    border-radius: 3px;
+}
+.tag-delete {
+    margin-left: 5px;
+    cursor: pointer;
+    color: #c62828; /* 赤 */
+    font-weight: bold;
+}
+.preset-tags {
+    margin: 10px 0;
+}
+.preset-tag {
+    margin: 3px;
+    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc; /* グレー */
+    border-radius: 3px;
+    cursor: pointer;
+    color: #333;
+}
+/* --- 6. アイテムリスト (code_add.html) --- */
+.item-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    border: 1px solid #ccc; /* グレー */
+    padding: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+.item {
+    border: 2px solid transparent;
+    padding: 5px;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
+}
+.item img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border: 1px solid #eee; /* グレー */
+}
+.item input[type="checkbox"] {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 20px;
+    height: 20px;
+}
+.item input[type="checkbox"]:checked + img {
+    border: 2px solid #c62828; /* 赤 */
+    box-shadow: 0 0 5px #c62828;
+}
+/* --- 7. コーデ・画像表示 (closet_view.html など) --- */
+.coord-item {
+    border: 1px solid #eee; /* グレー */
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+.img-box {
+    display: inline-block;
+    width: 120px;
+    height: 120px;
+    overflow: hidden;
+    vertical-align: middle;
+    border: 1px solid #e0e0e0; /* グレー */
+    border-radius: 4px;
+    background-color: #fff;
+    margin-right: 10px;
+}
+.clothing-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.item-line {
+    display: flex;
+    align-items: center;
+    margin: 12px 0;
+}
+.item-line .label {
+    font-weight: bold;
+    margin-right: 10px;
+    width: 80px; /* ラベル幅を固定 */
+    text-align: right;
+}
+/* 画像プレビュー (clothing_add.html) */
+.preview-box {
+    width: 150px;
+    height: 150px;
+    border: 1px solid #ccc; /* グレー */
+    background-color: #f9f9f9;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.preview-img {
+    max-width: 100%;
+    max-height: 100%;
+}
+/* --- 8. カレンダー (calendar_menu.html) --- */
+.calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e0e0e0; /* グレーの境界線 */
+    margin-bottom: 20px;
+    table-layout: fixed; /* セルの幅を均等に */
+}
+.calendar-table th {
+    background-color: #555; /* 濃いグレー */
+    color: white;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+}
+.calendar-table td {
+    border: 1px solid #e0e0e0; /* グレーの境界線 */
+    height: 90px; /* 日付セルの高さ */
+    vertical-align: top;
+    padding: 5px;
+    font-weight: bold;
+    font-size: 16px;
+    background-color: #ffffff;
+}
+.calendar-table td a {
+    display: block;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    text-decoration: none;
+    color: #c62828; /* 赤 (リンク色) */
+}
+.calendar-table td a:hover {
+    background-color: #fff9f9; /* わずかに赤みがかったホバー */
+    text-decoration: none;
+}
+/* 土日・祝日 */
+.calendar-table th.cal-sun,
+.calendar-table td.cal-sun {
+    color: #e53935; /* 赤 */
+}
+.calendar-table th.cal-sat,
+.calendar-table td.cal-sat {
+    color: #1e88e5; /* 青 */
+}
+/* 今日の日付 */
+.calendar-table td.cal-today {
+    background-color: #fffbe6; /* 薄い黄色 */
+}
+.calendar-table td.cal-today a {
+    color: #c62828; /* 赤 */
+    font-weight: bold;
+    border: 2px solid #c62828;
+    border-radius: 4px;
+}
+/* 当月外の日付 */
+.calendar-table td.cal-other {
+    background-color: #f9f9f9; /* 少しグレー */
+}
+.calendar-table td.cal-other a {
+    color: #999; /* グレー (薄い文字色) */
+}
+
+/* === style.css の末尾に追記 === */
+
+/* --- 9. 画像付き選択リスト (wear_change / delete) --- */
+.image-select-list {
+    max-height: 400px; /* 高さが400pxを超えたらスクロールバー */
+    overflow-y: auto;
+    border: 1px solid #e0e0e0; /* グレーの境界線 */
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.image-select-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    margin-bottom: 5px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.image-select-item:hover {
+    background-color: #f9f9f9;
+}
+
+/* ラジオボタンを隠す */
+.image-select-item input[type="radio"] {
+    display: none;
+}
+
+/* ラジオボタンが選択された時のスタイル */
+.image-select-item input[type="radio"]:checked + label {
+    border-color: #c62828; /* 赤い枠線 */
+    background-color: #fff9f9; /* わずかに赤い背景 */
+}
+
+/* ラジオボタンのラベル (アイテム全体をカバー) */
+.image-select-item label {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    cursor: pointer;
+    border: 2px solid #eee;
+    padding: 5px;
+    border-radius: 5px;
+}
+.image-select-item label .img-box {
+    width: 80px; /* 小さめの画像ボックス */
+    height: 80px;
+}
+.image-select-item label span {
+    font-size: 16px;
+    font-weight: bold;
+    margin-left: 15px;
+}
+
+/* === style.css の末尾に追記 === */
+
+/* --- 12. カレンダー月移動 (calendar_menu.html) --- */
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* ヘッダーの中央に配置 */
+    width: 300px; 
+    margin: 0 auto;
+}
+.calendar-nav h1 {
+    font-size: 20px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    color: white;
+    /* 幅が可変になるため */
+    min-width: 150px;
+    text-align: center;
+}
+.cal-nav-btn {
+    font-size: 24px;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+    padding: 0 15px;
+}
+.cal-nav-btn:hover {
+    color: #ddd;
+    text-decoration: none;
+}
+
+/* === style.css の末尾に追記 === */
+
+/* --- 13. お気に入りボタン (Favorite Button) --- */
+.favorite-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    background-color: #f0f0f0; /* グレー */
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #555;
+    transition: background-color 0.2s, color 0.2s;
+    margin-bottom: 15px; /* ボタン下の余白 */
+}
+
+.favorite-toggle-btn .fav-icon {
+    font-size: 20px;
+    margin-right: 8px;
+    color: #aaa; /* デフォルトのハート (オフ) */
+}
+
+/* お気に入りONの状態 (JSで "favorited" クラスを付与) */
+.favorite-toggle-btn.favorited {
+    background-color: #fff9f9; /* 薄い赤 */
+    border-color: #c62828; /* 赤 */
+    color: #c62828;
+}
+
+.favorite-toggle-btn.favorited .fav-icon {
+    color: #e53935; /* 濃い赤 (オン) */
+}
+
+/* フォーム内の隠しチェックボックス */
+.favorite-toggle-btn input[type="checkbox"] {
+    display: none;
+}
+
+/* お気に入り表示用 (一覧画面) */
+.favorite-display {
+    font-size: 20px;
+    color: #e53935; /* 赤 */
+    margin-left: 5px;
+    display: inline-block;
+}
