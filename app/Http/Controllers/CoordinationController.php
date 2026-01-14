@@ -15,7 +15,7 @@ class CoordinationController extends Controller
         return view('coord.code_add');
     }
 
-    // 追加する関数
+    // コーデマスター保存画面を表示
     public function createMaster()
     {
         // resources/views/coord/cordination_save.blade.php を表示
