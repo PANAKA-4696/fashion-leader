@@ -18,6 +18,9 @@ Route::get('/coord/add', [CoordinationController::class, 'create']);
 // コーデマスター保存画面
 Route::get('/coord/save', [CoordinationController::class, 'createMaster']);
 
+// コーデマスター変更画面
+Route::get('/coord/edit', [CoordinationController::class, 'editMaster']);
+
 //フクシマ担当場所
 
 //タナカ担当場所

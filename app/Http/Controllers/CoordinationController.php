@@ -22,5 +22,11 @@ class CoordinationController extends Controller
         return view('coord.cordination_save');
     }
 
+    public function editMaster()
+    {
+        // resources/views/coord/coordination_change.blade.php を表示
+        return view('coord.coordination_change');
+    }
+
     // 今後、保存処理などを作る場合はここに追記していきます
 }
