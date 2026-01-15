@@ -27,3 +27,5 @@ Route::get('/coord/save', [CoordinationController::class, 'createMaster']);
 //モギ担当場所
 
 //クニヤス担当場所
+Route::get('/main/Calendar', [MainController::class, 'Calendar']);
+Route::get('/main/Closet_clothes', [MainController::class, 'Closet_clothes']);
