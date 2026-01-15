@@ -3,36 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>コーデ追加画面</title>
+    <title>コーデマスター登録</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <style>
+        /* 追加のスタイル：検索BOXやバリデーション表示用 */
+        .search-box { margin-bottom: 15px; width: 100%; padding: 8px; }
+        .error-message { color: red; font-size: 12px; display: none; }
+        .category-label { font-weight: bold; margin-top: 10px; display: block; color: #333; }
+    </style>
 </head>
 <body>
     <div class="header-nav">
-        <h1>コーデ追加</h1>
-        <a href="/closet/view">クローゼットへ戻る</a>
+        <h1>コーデマスター登録</h1>
+        <a href="/coord/manage">コーデ管理へ</a>
     </div>
 
     <div class="container">
-        <p>クローゼットA の服を使って<strong>「クローゼットA」に</strong>新しいコーデを登録します。</p>
-        <p style="font-size: 14px; color: #555;">（コーデの「原型」を登録・管理する場合は「コーデマスター管理」から行います）</p>
+        <p>コーデの「原型」を登録・管理する</p>
         
-        <form action="/closet/view" method="POST" id="codeForm" enctype="multipart/form-data">
-            @csrf <label for="coord_image">全体写真 (任意):</label>
-            <input type="file" id="coord_image" name="coord_image" accept="image/*" onchange="previewImage(event, 'imagePreviewFull')">
+        <form action="/coord/store" method="POST" id="codeForm" enctype="multipart/form-data">
+            @csrf
+            
+            <label for="coord_image">全体写真 (任意):</label>
+            <input type="file" id="coord_image" name="coord_image" accept="image/jpeg,image/png" onchange="previewImage(event, 'imagePreviewFull')">
             <div class="preview-box">
-                <img id="imagePreviewFull" src="" alt="画像プレビュー" class="preview-img" style="display:none;">
+                <img id="imagePreviewFull" src="" alt="画像プレビュー" class="preview-img" style="display:none; border: 1px solid #ccc; max-width: 100%;">
             </div>
             <br>
+
             <label for="tag_input">コーデのタグ:</label>
-            <input type="text" id="tag_input" placeholder="例：春のデートコーデ (Enterで追加)">
+            <input type="text" id="tag_input" placeholder="例：春のデートコーデ(Enterで追加)">
             <div id="tagContainer" class="tag-container"></div>
+            <input type="hidden" name="tags" id="hidden_tags">
             <br>
+
             <label>コーデに使う服を選択してください:</label>
-            <div class="item-list">
-                <label class="item">
-                    <input type="checkbox" name="clothing_ids[]" value="7">
-                    <img src="{{ asset('images/アクセサリー2.jpg') }}" alt="アクセサリー2">
-                    <p>アクセサリー2</p>
+            <input type="text" id="itemSearch" class="search-box" placeholder="服を検索...">
+            
+            <div id="itemValidationError" class="error-message">シャツ、パンツ、シューズは必須項目です。</div>
+
+            <div class="item-list" id="itemList">
+                <label class="item" data-category="shirt">
+                    <input type="checkbox" name="clothing_ids[]" value="1" data-category="shirt">
+                    <img src="{{ asset('images/sample_shirt.jpg') }}" alt="シャツ">
+                    <p>白シャツ</p>
+                </label>
+                <label class="item" data-category="pants">
+                    <input type="checkbox" name="clothing_ids[]" value="2" data-category="pants">
+                    <img src="{{ asset('images/sample_pants.jpg') }}" alt="パンツ">
+                    <p>デニムパンツ</p>
+                </label>
+                <label class="item" data-category="shoes">
+                    <input type="checkbox" name="clothing_ids[]" value="3" data-category="shoes">
+                    <img src="{{ asset('images/sample_shoes.jpg') }}" alt="シューズ">
+                    <p>スニーカー</p>
+                </label>
+                <label class="item" data-category="accessory">
+                    <input type="checkbox" name="clothing_ids[]" value="4" data-category="accessory">
+                    <img src="{{ asset('images/sample_acc.jpg') }}" alt="アクセサリー">
+                    <p>ネックレス</p>
                 </label>
             </div>
             <br>
@@ -42,33 +71,72 @@
                 <span class="fav-icon">❤</span>
                 <span>このコーデをお気に入り登録</span>
             </label>
+
             <input type="submit" value="コーデを登録する" class="primary">
-            <a href="/closet/view" class="button">キャンセル</a>
+            
+            <a href="javascript:history.back();" class="button">キャンセル</a>
         </form>
     </div>
 
     <script>
-        // JS部分は元のロジックを維持
+        // --- No.6 プレビュー用 ---
         function previewImage(event, previewId) {
+            const output = document.getElementById(previewId);
             const reader = new FileReader();
             reader.onload = function() {
-                const output = document.getElementById(previewId);
                 output.src = reader.result;
                 output.style.display = 'block';
             };
-            reader.readAsDataURL(event.target.files[0]);
+            if (event.target.files[0]) {
+                reader.readAsDataURL(event.target.files[0]);
+            }
         }
 
-        // タグ機能などのJSもここに記述
+        // --- No.11 検索機能 ---
+        document.getElementById('itemSearch').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.item').forEach(item => {
+                const name = item.querySelector('p').textContent.toLowerCase();
+                item.style.display = name.includes(query) ? 'flex' : 'none';
+            });
+        });
+
+        // --- No.12 カテゴリー制限ロジック ---
+        const checkboxes = document.querySelectorAll('input[name="clothing_ids[]"]');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const category = this.dataset.category;
+                // アクセサリー以外は1つまでしか選べない
+                if (category !== 'accessory' && this.checked) {
+                    checkboxes.forEach(other => {
+                        if (other !== this && other.dataset.category === category) {
+                            other.checked = false;
+                        }
+                    });
+                }
+            });
+        });
+
+        // --- No.14 バリデーションチェック ---
+        document.getElementById('codeForm').addEventListener('submit', function(e) {
+            const selectedCategories = Array.from(document.querySelectorAll('input[name="clothing_ids[]"]:checked'))
+                                            .map(cb => cb.dataset.category);
+            
+            const required = ['shirt', 'pants', 'shoes'];
+            const hasAllRequired = required.every(req => selectedCategories.includes(req));
+
+            if (!hasAllRequired) {
+                e.preventDefault();
+                document.getElementById('itemValidationError').style.display = 'block';
+                alert('シャツ、パンツ、シューズを選択してください。');
+            }
+        });
+
+        // お気に入りボタン表示切り替え
         document.getElementById('favorite-toggle').addEventListener('change', function() {
             const btn = this.closest('.favorite-toggle-btn');
-            if (this.checked) {
-                btn.classList.add('favorited');
-                btn.querySelector('span:last-child').textContent = 'お気に入りに登録済み';
-            } else {
-                btn.classList.remove('favorited');
-                btn.querySelector('span:last-child').textContent = 'このコーデをお気に入り登録';
-            }
+            btn.querySelector('span:last-child').textContent = this.checked ? 'お気に入りに登録済み' : 'このコーデをお気に入り登録';
+            this.checked ? btn.classList.add('favorited') : btn.classList.remove('favorited');
         });
     </script>
 </body>
