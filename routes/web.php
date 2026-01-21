@@ -37,11 +37,22 @@ Route::get('/closet/main', [ClosetController::class, 'index'])->name('closet.mai
 // クローゼット詳細表示 (closet_view)
 Route::get('/closet/view/{id}', [ClosetController::class, 'show'])->name('closet.view');
 
-// 今回のエラーを消すために、名前だけ定義します
+// クローゼット編集画面の表示
 Route::get('/closet/edit/{id}', [ClosetController::class, 'edit'])->name('closet.edit');
+// クローゼット編集内容の保存（更新）
+Route::post('/closet/update/{id}', [ClosetController::class, 'update'])->name('closet.update');
 
-// 現状：名前（name）がついていない
-Route::get('/coord/add', [CoordinationController::class, 'create']);
+// 修正後（名前を追加）
+Route::get('/coord/add', [CoordinationController::class, 'create'])->name('coord.add');
+
+// クローゼットから特定のコーデを削除する（紐付けを解除する）
+Route::post('/closet/coord/delete', [ClosetController::class, 'removeCoord'])->name('closet.coord.delete');
+
+// クローゼット追加画面の表示
+Route::get('/closet/add', [ClosetController::class, 'create'])->name('closet.add');
+
+// クローゼットの保存処理
+Route::post('/closet/store', [ClosetController::class, 'store'])->name('closet.store');
 
 //タナカ担当場所
 

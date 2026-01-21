@@ -18,4 +18,9 @@ class Code extends Model
     {
         return $this->belongsToMany(Wear::class, 'WEAR_CODE', 'CODE_ID', 'WEAR_ID');
     }
+
+    public function tags()
+    {
+        return $this->hasMany(Tag::class, 'CODE_ID', 'CODE_ID');
+    }
 }
