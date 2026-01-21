@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -17,11 +18,30 @@ Route::get('/coord/add', [CoordinationController::class, 'create']);
 
 // コーデマスター保存画面
 Route::get('/coord/save', [CoordinationController::class, 'createMaster']);
+// コーデマスターの保存実行（フォームのaction先に指定します）
+Route::post('/coord/master-store', [CoordinationController::class, 'storeMaster'])->name('coord.master.store');
 
 // コーデマスター変更画面
 Route::get('/coord/edit', [CoordinationController::class, 'editMaster']);
 
-//フクシマ担当場所
+// コーデ追加画面の表示（クローゼットIDを渡す想定）
+Route::get('/closet/{closet_id}/add-code', [CoordinationController::class, 'create'])->name('closet.code.add');
+// 保存処理
+Route::post('/closet/code-store', [CoordinationController::class, 'store'])->name('closet.code.store');
+
+//フクシマ担当場所(タナカ作)
+use App\Http\Controllers\ClosetController; // これが必要です！
+// クローゼット一覧画面
+Route::get('/closet/main', [ClosetController::class, 'index'])->name('closet.main');
+
+// クローゼット詳細表示 (closet_view)
+Route::get('/closet/view/{id}', [ClosetController::class, 'show'])->name('closet.view');
+
+// 今回のエラーを消すために、名前だけ定義します
+Route::get('/closet/edit/{id}', [ClosetController::class, 'edit'])->name('closet.edit');
+
+// 現状：名前（name）がついていない
+Route::get('/coord/add', [CoordinationController::class, 'create']);
 
 //タナカ担当場所
 
