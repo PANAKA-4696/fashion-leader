@@ -32,35 +32,22 @@
         <h2>クローゼットを選択してください</h2>
 
         <ul class="closet-list">
-            
+            @foreach($closets as $closet)
             <li class="closet-item">
-                <a href="/closet/view/1" class="closet-name">
-                    クローゼットA
-                    <span class="favorite-display">❤</span>
+                <a href="{{ route('closet.view', ['id' => $closet->CLOSET_ID]) }}" class="closet-name">
+                    {{ $closet->CLOSET_NAME }}
+                    @if($closet->is_favorite)
+                        <span class="favorite-display">❤</span>
+                    @endif
                 </a>
-                <p class="tag-display">
-                    タグ: <span class="tag-badge">仕事用</span> <span class="tag-badge">お気に入り</span>
-                </p>
+                <p class="closet-tags">タグ: {{ $closet->tag_string }}</p>
             </li>
-
-            <li class="closet-item">
-                <a href="/closet/view/2" class="closet-name">クローゼットB</a>
-                <p class="tag-display">タグ: <span class="tag-badge">デート</span></p>
-            </li>
-
-            <li class="closet-item">
-                <a href="/closet/view/3" class="closet-name">
-                    クローゼットC
-                    <span class="favorite-display">❤</span>
-                </a>
-                <p class="tag-display">タグ: <span class="tag-badge">ルームウェア</span></p>
-            </li>
-
+            @endforeach
         </ul>
 
         <hr>
         <div style="text-align: center; margin-top: 20px;">
-            <a href="/closet/add" class="button primary" style="padding: 12px 40px;">クローゼット追加</a>
+            <a href="{{ route('closet.add') }}" class="button primary">新しいクローゼットを作る</a>
         </div>
     </div>
 </body>
