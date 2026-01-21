@@ -40,22 +40,6 @@
             @endforeach
         </div>
         
-        <div style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">
-            <span style="font-weight: bold; align-self: center;">ソート:</span>
-            @php
-                function buildUrl($sort, $category = null) {
-                    $url = '/clothing/wear-screen?sort=' . $sort;
-                    if ($category) {
-                        $url .= '&category=' . urlencode($category);
-                    }
-                    return $url;
-                }
-            @endphp
-            <a href="{{ buildUrl('default', $selectedCategory) }}" class="button" style="@if($currentSort === 'default') background-color: #2196F3; color: white; @endif">追加順</a>
-            <a href="{{ buildUrl('category', $selectedCategory) }}" class="button" style="@if($currentSort === 'category') background-color: #2196F3; color: white; @endif">カテゴリ順</a>
-            <a href="{{ buildUrl('favorite', $selectedCategory) }}" class="button" style="@if($currentSort === 'favorite') background-color: #2196F3; color: white; @endif">お気に入り優先</a>
-            <a href="{{ buildUrl('tag', $selectedCategory) }}" class="button" style="@if($currentSort === 'tag') background-color: #2196F3; color: white; @endif">タグが多い順</a>
-        </div>
         <div class="coord-item">
             @forelse($clothings as $clothing)
                 <p class="item-line">
