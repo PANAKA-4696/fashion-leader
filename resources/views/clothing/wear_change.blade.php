@@ -22,53 +22,48 @@
             <label for="item_select" style="font-weight: bold; font-size: 18px;">変更する服を選択</label>
 
             <div class="image-select-list">
-                
+                @forelse($clothings as $clothing)
                 <div class="image-select-item">
-                    <input type="radio" id="item_1" name="item_id" value="1" required>
-                    <label for="item_1">
-                        <span class="img-box"><img class="clothing-img" src="../assets/images/シャツ.jpg" alt="シャツ"></span>
-                        <span>シャツ (トップス) <span class="favorite-display">❤</span></span>
+                    <input type="radio" id="item_{{ $clothing->id }}" name="item_id" value="{{ $clothing->id }}" required>
+                    <label for="item_{{ $clothing->id }}">
+                        <span class="img-box">
+                            @if($clothing->image_path)
+                                <img class="clothing-img" src="{{ asset('storage/' . $clothing->image_path) }}" alt="{{ $clothing->category }}">
+                            @else
+                                <img class="clothing-img" src="" alt="画像なし">
+                            @endif
+                        </span>
+                        <span>
+                            {{ $clothing->category }}
+                            @if($clothing->is_favorite)
+                                <span class="favorite-display">❤</span>
+                            @endif
+                        </span>
                     </label>
                 </div>
-                
-                <div class="image-select-item">
-                    <input type="radio" id="item_5" name="item_id" value="5">
-                    <label for="item_5">
-                        <span class="img-box"><img class="clothing-img" src="../assets/images/シャツ2.jpg" alt="シャツ2"></span>
-                        <span>シャツ2 (トップス)</span>
-                    </label>
-                </div>
-
-                <div class="image-select-item">
-                    <input type="radio" id="item_2" name="item_id" value="2">
-                    <label for="item_2">
-                        <span class="img-box"><img class="clothing-img" src="../assets/images/パンツ.jpg" alt="パンツ"></span>
-                        <span>パンツ (ボトムス)</span>
-                    </label>
-                </div>
-                
-                <div class="image-select-item">
-                    <input type="radio" id="item_4" name="item_id" value="4">
-                    <label for="item_4">
-                        <span class="img-box"><img class="clothing-img" src="../assets/images/outerwear.jpg" alt="アウター"></span>
-                        <span>アウター (アウター)</span>
-                    </label>
-                </div>
-
-                <div class="image-select-item">
-                    <input type="radio" id="item_3" name="item_id" value="3">
-                    <label for="item_3">
-                        <span class="img-box"><img class="clothing-img" src="../assets/images/シューズ.jpg" alt="シューズ"></span>
-                        <span>シューズ (シューズ) <span class="favorite-display">❤</span></span>
-                    </label>
-                </div>
+                @empty
+                <p>変更する服がありません。</p>
+                @endforelse
             </div>
             <br>
-            <a href="wear-item-change" class="button primary" style="background-color: #dc3545; border-color: #dc3545;">情報変更画面へ</a>
+            @if($clothings->count() > 0)
+            <a href="javascript:void(0)" onclick="submitForm()" class="button primary" style="background-color: #dc3545; border-color: #dc3545;">情報変更画面へ</a>
+            @endif
             
             <a href="wear-screen" class="button">キャンセル</a>
 
         </form>
+
+        <script>
+            function submitForm() {
+                const selectedId = document.querySelector('input[name="item_id"]:checked');
+                if (!selectedId) {
+                    alert('変更する服を選択してください。');
+                    return;
+                }
+                window.location.href = '/clothing/wear-item-change/' + selectedId.value;
+            }
+        </script>
     </div>
 </body>
 </html>
