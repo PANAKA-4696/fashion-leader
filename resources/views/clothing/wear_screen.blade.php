@@ -9,7 +9,7 @@
 <body>
     <div class="header-nav">
         <h1>服マスター管理</h1>
-        <a href="../main/calendar_menu.html">メインへ戻る</a>
+        <a href="../main/calendar-menu">メインへ戻る</a>
     </div>
 
     <div class="container">
@@ -45,7 +45,7 @@
         
         <div style="margin-bottom: 15px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
             <div style="display: flex; gap: 8px; align-items: center;">
-                <label for="tag-select" style="font-weight: bold;">タグ:</label>
+                <label for="tag-select" style="font-weight: bold; white-space: nowrap; flex-shrink: 0;">タグ:</label>
                 <select id="tag-select" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="">すべてのタグ</option>
                     @foreach($tags as $tag)
