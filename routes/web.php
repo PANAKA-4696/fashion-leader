@@ -24,8 +24,10 @@ Route::post('/coord/master-store', [CoordinationController::class, 'storeMaster'
 // コーデマスター変更画面
 Route::get('/coord/edit', [CoordinationController::class, 'editMaster']);
 
+// ★ここが修正箇所です（closet.code.add → closet.coord.add に変更）
 // コーデ追加画面の表示（クローゼットIDを渡す想定）
-Route::get('/closet/{closet_id}/add-code', [CoordinationController::class, 'create'])->name('closet.code.add');
+Route::get('/closet/{closet_id}/add-code', [CoordinationController::class, 'create'])->name('closet.coord.add');
+
 // 保存処理
 Route::post('/closet/code-store', [CoordinationController::class, 'store'])->name('closet.code.store');
 

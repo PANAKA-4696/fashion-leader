@@ -61,7 +61,7 @@
         <hr>
         
         <div style="margin-bottom: 20px;">
-            <a href="{{ route('coord.add') }}" class="button primary">コーデ追加</a>
+            <a href="{{ route('closet.coord.add', ['closet_id' => $closet->CLOSET_ID]) }}" class="button primary">コーデ追加</a>
             <a href="/clothing/add" class="button primary">服追加</a>
         </div>
         
