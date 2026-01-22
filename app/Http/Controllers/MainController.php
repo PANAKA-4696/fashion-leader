@@ -15,11 +15,12 @@ class MainController extends Controller
     // 服マスター管理画面を表示する命令
     public function wear_screen()
     {
-        // ソート種別とカテゴリを取得
-        $sortBy = request()->query('sort', 'default');
+        // フィルタパラメータを取得
         $selectedCategory = request()->query('category', null);
+        $selectedTag = request()->query('tag', null);
+        $selectedFavorite = request()->query('favorite', null);
         
-        // ソートロジック
+        // フィルタリングロジック
         $clothings = \App\Models\Clothing::all();
         
         // カテゴリでフィルタリング
@@ -29,39 +30,41 @@ class MainController extends Controller
             });
         }
         
-        switch ($sortBy) {
-            case 'category':
-                // カテゴリでソート
-                $clothings = $clothings->sortBy('category');
-                break;
-            case 'favorite':
-                // お気に入り優先（trueが先）
-                $clothings = $clothings->sortByDesc('is_favorite');
-                break;
-            case 'tag':
-                // タグが多い順（複雑なので、タグ数でソート）
-                $clothings = $clothings->sortByDesc(function($clothing) {
-                    $tags = json_decode($clothing->tags, true) ?? [];
-                    return count($tags);
-                });
-                break;
-            case 'default':
-            default:
-                // デフォルトは追加順（ID昇順）
-                $clothings = $clothings->sortBy('id');
-                break;
+        // タグでフィルタリング
+        if ($selectedTag) {
+            $clothings = $clothings->filter(function($clothing) use ($selectedTag) {
+                $tags = json_decode($clothing->tags, true) ?? [];
+                return in_array($selectedTag, $tags);
+            });
+        }
+        
+        // お気に入りでフィルタリング
+        if ($selectedFavorite === 'true') {
+            $clothings = $clothings->filter(function($clothing) {
+                return $clothing->is_favorite === true;
+            });
         }
         
         // カテゴリ一覧を取得
         $allClothings = \App\Models\Clothing::all();
         $categories = $allClothings->pluck('category')->unique()->sort()->values();
         
+        // タグ一覧を取得
+        $allTags = collect();
+        $allClothings->each(function($clothing) use (&$allTags) {
+            $tags = json_decode($clothing->tags, true) ?? [];
+            $allTags = $allTags->concat($tags);
+        });
+        $tags = $allTags->unique()->sort()->values();
+        
         // resources/views/clothing/wear_screen.blade.php を表示せよという意味
         return view('clothing.wear_screen', [
             'clothings' => $clothings,
-            'currentSort' => $sortBy,
-            'selectedCategory' => $selectedCategory,
             'categories' => $categories,
+            'tags' => $tags,
+            'selectedCategory' => $selectedCategory,
+            'selectedTag' => $selectedTag,
+            'selectedFavorite' => $selectedFavorite,
         ]);
         
     }
