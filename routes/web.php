@@ -1,31 +1,32 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\MainController;
+use App\Http\Controllers\CoordinationController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-//リーダタナカ担当場所
-// 今日のコーデ変更保存画面
-use App\Http\Controllers\MainController;
-// http://localhost/main/edit にアクセスしたら、MainControllerのeditClosetを実行する
-Route::get('/main/closet-edit', [MainController::class, 'editCloset']);
-
-use App\Http\Controllers\CoordinationController;
+// コーデ管理
 Route::get('/coord/add', [CoordinationController::class, 'create']);
-
-// コーデマスター保存画面
 Route::get('/coord/save', [CoordinationController::class, 'createMaster']);
 
-//フクシマ担当場所
+// カレンダー画面
+Route::get('/main/calendar', [MainController::class, 'calendar']);
 
-//タナカ担当場所
+// 今日のコーデ確認画面
+Route::get('/main/closet_clothes', [MainController::class, 'closet_clothes']);
 
-//オオタ担当場所
+// 今日のコーデ編集画面（← アンダーバーに統一）
+Route::get('/main/closet_edit', [MainController::class, 'closet_edit']);
+Route::post('/main/closet_edit', [MainController::class, 'saveCoord']);
 
-//モギ担当場所
+// カレンダー API
+Route::get('/api/calendar-status', [MainController::class, 'getMonthlyStatus']);
 
-//クニヤス担当場所
-Route::get('/main/Calendar', [MainController::class, 'Calendar']);
-Route::get('/main/Closet_clothes', [MainController::class, 'Closet_clothes']);
+// 今日のコーデ取得 API
+Route::get('/api/coord', [MainController::class, 'getCoordData']);
+
+// 今日のコーデ削除
+Route::post('/main/deleteCoord', [MainController::class, 'deleteCoord']);
