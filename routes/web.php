@@ -60,6 +60,25 @@ Route::post('/closet/store', [ClosetController::class, 'store'])->name('closet.s
 
 //オオタ担当場所
 
-//モギ担当場所
+//モギ担当場所(タナカ修正)
+use App\Http\Controllers\AuthController; // ★追加忘れずに
+
+// --- 認証系ルート ---
+
+// 新規登録画面の表示
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+// 新規登録処理（保存）
+Route::post('/register', [AuthController::class, 'register'])->name('register.store');
+
+// --- 修正後（AuthControllerを使う形に変更） ---
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+
+// --- メイン画面（遷移先） ---
+// まだカレンダー画面のルートがない場合は、仮で以下を追加しておいてください
+Route::get('/main/calendar', function () {
+    return 'カレンダー画面（仮）'; 
+})->name('main.calendar');
+
 
 //クニヤス担当場所
