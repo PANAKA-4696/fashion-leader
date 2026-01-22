@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;  // DB操作用
 use Illuminate\Support\Str;         // 文字列生成用
 // モデルは今回DBファサードを使うのでuseしなくても動作しますが、残しておいてもOKです
+use Illuminate\Support\Facades\Auth; // ★追加
 
 class CoordinationController extends Controller
 {
@@ -23,7 +24,7 @@ class CoordinationController extends Controller
             return view('coord.code_add'); 
         }
 
-        $userId = 'US000001';
+        $userId = Auth::user()->USER_ID; // ★変更
 
         // （中略：クローゼット取得や服取得のロジックはそのまま）
         $closet = DB::table('CLOSET')->where('CLOSET_ID', $closet_id)->first();
@@ -48,7 +49,7 @@ class CoordinationController extends Controller
      */
     public function store(Request $request)
     {
-        $userId = 'US000001'; // 実際は Auth::id()
+        $userId = Auth::user()->USER_ID; // ★変更
         $closetId = $request->input('closet_id'); // フォームから送られてきたID
 
         // 入力チェック

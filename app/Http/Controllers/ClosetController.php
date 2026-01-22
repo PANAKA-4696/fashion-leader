@@ -7,6 +7,7 @@ use App\Models\Closet;
 use App\Models\Code;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str; // ID生成用
+use Illuminate\Support\Facades\Auth; // ★追加
 
 class ClosetController extends Controller
 {
@@ -15,7 +16,7 @@ class ClosetController extends Controller
      */
     public function index()
     {
-        $userId = 'US000001'; // 実際は Auth::id()
+        $userId = Auth::user()->USER_ID; // ★変更
 
         // ユーザーのクローゼット一覧を取得
         $closets = Closet::where('USER_ID', $userId)->get();
@@ -49,7 +50,7 @@ class ClosetController extends Controller
      */
     public function show($id)
     {
-        $userId = 'US000001';
+        $userId = Auth::user()->USER_ID; // ★変更
 
         // 1. クローゼット本体を取得
         $closet = Closet::findOrFail($id);
@@ -87,7 +88,7 @@ class ClosetController extends Controller
         $currentTagsString = implode(', ', $tags);
 
         $isFavorite = DB::table('FAVORITE')
-                        ->where('USER_ID', 'US000001')
+                        ->where('USER_ID', Auth::user()->USER_ID) // ★変更
                         ->where('CLOSET_ID', $id)
                         ->exists();
 
@@ -99,7 +100,7 @@ class ClosetController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $userId = 'US000001';
+        $userId = Auth::user()->USER_ID; // ★変更
 
         DB::transaction(function () use ($request, $id, $userId) {
             // 1. クローゼット本体の更新
@@ -179,7 +180,7 @@ class ClosetController extends Controller
             'closet_name' => 'required|max:255',
         ]);
 
-        $userId = 'US000001';
+        $userId = Auth::user()->USER_ID; // ★変更
 
         // トランザクションでまとめて保存（失敗したらロールバック）
         DB::transaction(function () use ($request, $userId) {

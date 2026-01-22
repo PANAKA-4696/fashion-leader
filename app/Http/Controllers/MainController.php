@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth; // ★これを追加
 
 class MainController extends Controller
 {
@@ -19,7 +20,8 @@ class MainController extends Controller
     // ▼ 今日のコーデ登録・変更画面
     public function closet_edit(Request $request)
     {
-        $userId = 'USER0001';
+        // 変更後
+        $userId = Auth::user()->USER_ID;
 
         $wears = DB::table('WEAR')
             ->where('USER_ID', $userId)
@@ -36,7 +38,8 @@ class MainController extends Controller
     {
         $year = $request->year;
         $month = $request->month;
-        $userId = 'USER0001';
+        // 変更後
+        $userId = Auth::user()->USER_ID;
 
         $rows = DB::table('CALENDAR')
             ->leftJoin('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
@@ -66,7 +69,8 @@ class MainController extends Controller
     public function getCoordData(Request $request)
     {
         $date = $request->date;
-        $userId = 'USER0001';
+        // 変更後
+        $userId = Auth::user()->USER_ID;
 
         [$y, $m, $d] = explode('-', $date);
 
@@ -107,7 +111,8 @@ class MainController extends Controller
     public function saveCoord(Request $request)
     {
         $date = $request->date;
-        $userId = 'USER0001';
+        // 変更後
+        $userId = Auth::user()->USER_ID;
         $wearIds = $request->clothing_ids ?? [];
 
         [$y, $m, $d] = explode('-', $date);
@@ -172,7 +177,8 @@ class MainController extends Controller
     public function deleteCoord(Request $request)
     {
         $date = $request->date;
-        $userId = 'USER0001';
+        // 変更後
+        $userId = Auth::user()->USER_ID;
 
         [$y, $m, $d] = explode('-', $date);
 
@@ -189,7 +195,7 @@ class MainController extends Controller
 
         return redirect('/main/calendar');
     }
-  
+
     // 服マスター管理画面を表示する命令
     public function wear_screen()
     {
