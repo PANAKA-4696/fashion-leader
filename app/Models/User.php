@@ -2,47 +2,46 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    // ★追加：テーブル名を指定
+    protected $table = 'USER';
+
+    // ★追加：主キーを指定（デフォルトのidではないため）
+    protected $primaryKey = 'USER_ID';
+    
+    // ★追加：主キーは文字列（char）なのでincrementしない
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    // 保存可能なカラム
     protected $fillable = [
-        'name',
-        'email',
-        'password',
+        'USER_ID',
+        'USER_NAME',
+        'MAIL',
+        'PASSWORD',
+        // 'ROOT', // 必要であれば追加
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
+    // パスワードのカラム名が標準の 'password' ではなく 'PASSWORD' の場合
+    public function getAuthPassword()
+    {
+        return $this->PASSWORD;
+    }
+
     protected $hidden = [
-        'password',
+        'PASSWORD',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'PASSWORD' => 'hashed', // 自動でハッシュ化
+    ];
 }
