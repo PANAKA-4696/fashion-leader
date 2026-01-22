@@ -63,7 +63,8 @@ Route::get('/api/calendar-status', [MainController::class, 'getMonthlyStatus']);
 Route::get('/api/coord', [MainController::class, 'getCoordData']);
 
 // カレンダー画面
-Route::get('/main/calendar', [MainController::class, 'calendar']);
+// ★修正：ここに ->name('main.calendar') を追加します
+Route::get('/main/calendar', [MainController::class, 'calendar'])->name('main.calendar');
 
 // 今日のコーデ確認画面
 Route::get('/main/closet_clothes', [MainController::class, 'closet_clothes']);
@@ -120,13 +121,6 @@ Route::post('/register', [AuthController::class, 'register'])->name('register.st
 // --- 修正後（AuthControllerを使う形に変更） ---
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
-
-// --- メイン画面（遷移先） ---
-// まだカレンダー画面のルートがない場合は、仮で以下を追加しておいてください
-Route::get('/main/calendar', function () {
-    return 'カレンダー画面（仮）'; 
-})->name('main.calendar');
-
 
 // 今日のコーデ削除
 Route::post('/main/deleteCoord', [MainController::class, 'deleteCoord']);
