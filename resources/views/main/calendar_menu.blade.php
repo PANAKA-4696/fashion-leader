@@ -74,7 +74,13 @@
             <h1 id="calendarTitle">2026年1月</h1>
             <a href="#" class="cal-nav-btn" id="nextMonthBtn">&gt;</a>
         </div>
-        <a href="/" id="logoutBtn">ログアウト</a>
+        <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
+
+        <a href="#" id="logoutBtn" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+            ログアウト
+        </a>
     </div>
 
     <div class="container">

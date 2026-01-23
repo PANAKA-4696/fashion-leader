@@ -99,4 +99,18 @@ class AuthController extends Controller
             'login_error' => 'メールアドレスまたはパスワードが違います。',
         ])->onlyInput('email');
     }
+
+    /**
+     * ログアウト処理
+     */
+    public function logout(Request $request)
+    {
+        Auth::logout(); // ログアウト実行
+
+        $request->session()->invalidate();       // セッションを無効化
+        $request->session()->regenerateToken();  // CSRFトークンを再生成（セキュリティ対策）
+
+        // ログイン画面に戻す
+        return redirect()->route('login')->with('success', 'ログアウトしました。');
+    }
 }
