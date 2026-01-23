@@ -12,6 +12,7 @@ class Clothing extends Model
     protected $table = 'clothing';
 
     protected $fillable = [
+        'user_id', // ★追加
         'name',
         'category',
         'tags',
