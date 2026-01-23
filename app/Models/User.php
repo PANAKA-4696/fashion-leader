@@ -3,45 +3,50 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Foundation\Auth\User as Authenticatable; // ★これの重複がエラーの原因でした
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    // ★追加：テーブル名を指定
+    // テーブル名
     protected $table = 'USER';
 
-    // ★追加：主キーを指定（デフォルトのidではないため）
+    // 主キー（USER_ID）
     protected $primaryKey = 'USER_ID';
     
-    // ★追加：主キーは文字列（char）なのでincrementしない
+    // 主キーは自動増分（オートインクリメント）ではない
     public $incrementing = false;
+    
+    // 主キーの型は文字列
     protected $keyType = 'string';
 
     // 保存可能なカラム
     protected $fillable = [
         'USER_ID',
         'USER_NAME',
-        'MAIL',
         'PASSWORD',
-        // 'ROOT', // 必要であれば追加
+        'MAIL', // 必要であれば追加
     ];
 
-    // パスワードのカラム名が標準の 'password' ではなく 'PASSWORD' の場合
-    public function getAuthPassword()
-    {
-        return $this->PASSWORD;
-    }
-
+    // パスワードなどの隠したい項目
     protected $hidden = [
         'PASSWORD',
         'remember_token',
     ];
 
+    // キャスト設定
     protected $casts = [
         'email_verified_at' => 'datetime',
         'PASSWORD' => 'hashed', // 自動でハッシュ化
     ];
+
+    /**
+     * Laravel標準の「password」ではなく「PASSWORD」を使うように指示する
+     */
+    public function getAuthPassword()
+    {
+        return $this->PASSWORD;
+    }
 }
