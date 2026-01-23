@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Clothing;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth; // ★追加：これが必要です
 
 class ClothingController extends Controller
 {
@@ -45,6 +46,7 @@ class ClothingController extends Controller
 
         // 服の保存
         Clothing::create([
+            'user_id' => Auth::user()->USER_ID, // ★追加：自分のIDを登録
             'name' => $validated['category'],
             'category' => $validated['category'],
             'tags' => json_encode($tags),
@@ -61,17 +63,18 @@ class ClothingController extends Controller
      */
     public function destroy($id)
     {
-        $clothing = Clothing::findOrFail($id);
+        // ★修正：自分の持っている服の中から探す（他人の服は消せないようにする）
+        $clothing = Clothing::where('id', $id)
+            ->where('user_id', Auth::user()->USER_ID)
+            ->firstOrFail();
         
         // 画像ファイルの削除
         if ($clothing->image_path && Storage::disk('public')->exists($clothing->image_path)) {
             Storage::disk('public')->delete($clothing->image_path);
         }
         
-        // データベースから削除
         $clothing->delete();
         
-        // 服管理画面にリダイレクト
         return redirect('/clothing/wear-screen')->with('success', '服をマスターから削除しました。');
     }
 
@@ -80,7 +83,10 @@ class ClothingController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $clothing = Clothing::findOrFail($id);
+        // ★修正：自分の持っている服の中から探す
+        $clothing = Clothing::where('id', $id)
+            ->where('user_id', Auth::user()->USER_ID)
+            ->firstOrFail();
 
         // バリデーション
         $validated = $request->validate([
