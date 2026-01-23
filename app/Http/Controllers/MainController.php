@@ -20,27 +20,59 @@ class MainController extends Controller
     // ▼ 今日のコーデ登録・変更画面
     public function closet_edit(Request $request)
     {
-        // 変更後
+        // // ★修正：ログインチェックを追加
+        // // セッション切れなどでユーザー情報がない場合、ログイン画面へ強制送還する
+        // if (!Auth::check()) {
+        //     return redirect()->route('login')->with('error', 'ログインしてください。');
+        // }
+
+        // ここまで来れば安全にIDを取得できる
         $userId = Auth::user()->USER_ID;
 
         $wears = DB::table('WEAR')
             ->where('USER_ID', $userId)
             ->get();
 
+        // URLに日付があればそれを使う、なければ今日
+        $date = $request->date ?? date('Y-m-d');
+
         return view('main.closet_entry_or_change', [
             'wears' => $wears,
-            'date'  => $request->date
+            'date'  => $date
         ]);
     }
 
     // ▼ カレンダー用 API
     public function getMonthlyStatus(Request $request)
     {
+        // 1. ログインチェック (これがないとバグで画面が真っ白になります)
+        if (!Auth::check()) {
+            // ログインしていない場合でも、カレンダー枠を表示するために空のリストを送るか、
+            // 空配列を返してJS側で処理させます。今回は安全のため空配列を返します。
+            return response()->json([]);
+        }
+
         $year = $request->year;
         $month = $request->month;
-        // 変更後
         $userId = Auth::user()->USER_ID;
 
+        // 2. その月の日数（28〜31）を取得し、全ての日の「空データ」を作る
+        // 例: 2026年1月なら 31日分 の枠を用意する
+        $daysInMonth = \Carbon\Carbon::create($year, $month)->daysInMonth;
+        $result = [];
+
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            // 日付文字列を作成 (例: 2026-01-01)
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
+            
+            // デフォルト（未登録）状態でセット
+            $result[$dateStr] = [
+                'isRegistered' => false,
+                'img' => null
+            ];
+        }
+
+        // 3. データベースから登録済みのデータを取得
         $rows = DB::table('CALENDAR')
             ->leftJoin('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
             ->leftJoin('CODE', 'TODAY_CODE.CODE_ID', '=', 'CODE.CODE_ID')
@@ -50,11 +82,12 @@ class MainController extends Controller
             ->select('CALENDAR.CAL_DATE', 'CODE.IMAGE_PATH')
             ->get();
 
-        $result = [];
-
+        // 4. 登録がある日だけ、画像データで上書きする
         foreach ($rows as $row) {
             if ($row->IMAGE_PATH) {
                 $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $row->CAL_DATE);
+                
+                // さっき作った枠の中にデータを入れる
                 $result[$dateStr] = [
                     'isRegistered' => true,
                     'img' => $row->IMAGE_PATH
@@ -62,6 +95,7 @@ class MainController extends Controller
             }
         }
 
+        // 全ての日付データが入った配列を返す
         return response()->json($result);
     }
 
@@ -205,7 +239,7 @@ class MainController extends Controller
         $selectedFavorite = request()->query('favorite', null);
         
         // フィルタリングロジック
-        $clothings = \App\Models\Clothing::all();
+        $clothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get();
         
         // カテゴリでフィルタリング
         if ($selectedCategory) {
@@ -230,7 +264,7 @@ class MainController extends Controller
         }
         
         // カテゴリ一覧を取得
-        $allClothings = \App\Models\Clothing::all();
+        $allClothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get();
         $categories = $allClothings->pluck('category')->unique()->sort()->values();
         
         // タグ一覧を取得
@@ -257,7 +291,7 @@ class MainController extends Controller
     public function wear_change()
     {
         // データベースから全ての服を取得
-        $clothings = \App\Models\Clothing::all();
+        $clothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get(); // ★修正
         // resources/views/clothing/wear_change.blade.php を表示せよという意味
         return view('clothing.wear_change', ['clothings' => $clothings]);
         
@@ -267,7 +301,10 @@ class MainController extends Controller
     public function wear_item_change($id)
     {
         // IDから服の情報を取得
-        $clothing = \App\Models\Clothing::findOrFail($id);
+        // 修正後：IDが一致し、かつ USER_ID が自分のものだけを取得（なければ404エラー）
+        $clothing = \App\Models\Clothing::where('id', $id)
+            ->where('user_id', Auth::user()->USER_ID)
+            ->firstOrFail();
         // resources/views/clothing/wear_item_change.blade.php を表示せよという意味
         return view('clothing.wear_item_change', ['clothing' => $clothing]);
     }
@@ -283,7 +320,7 @@ class MainController extends Controller
     public function wear_delete()
     {
         // データベースから全ての服を取得
-        $clothings = \App\Models\Clothing::all();
+        $clothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get(); // ★修正
         // resources/views/clothing/wear_delete.blade.php を表示せよという意味
         return view('clothing.wear_delete', ['clothings' => $clothings]);
     }

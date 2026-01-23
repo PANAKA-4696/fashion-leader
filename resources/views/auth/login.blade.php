@@ -11,12 +11,18 @@
         <h2>ログイン</h2>
 
         @if ($errors->any())
-            <div style="color: red; margin-bottom: 15px; font-size: 0.9em; text-align:center;">
-                @error('login_error')
-                    {{ $message }}
-                @else
-                    入力内容を確認してください。
-                @enderror
+            <div style="color: #d32f2f; background-color: #ffcdd2; padding: 10px; border-radius: 4px; text-align: center; margin-bottom: 15px;">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+        
+        @if (session('error'))
+            <div style="color: #d32f2f; background-color: #ffcdd2; padding: 10px; border-radius: 4px; text-align: center; margin-bottom: 15px;">
+                {{ session('error') }}
             </div>
         @endif
 
