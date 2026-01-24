@@ -9,7 +9,7 @@
 <body>
     <div class="header-nav">
         <h1>服マスター管理</h1>
-        <a href="../main/calendar-menu">メインへ戻る</a>
+        <a href="{{ route('main.calendar') }}" class="back-btn">メインへ戻る</a>
     </div>
 
     <div class="container">
@@ -90,15 +90,15 @@
             @forelse($clothings as $clothing)
                 <p class="item-line">
                     <span class="img-box">
-                        @if($clothing->image_path)
-                            <img class="clothing-img" src="{{ asset('storage/' . $clothing->image_path) }}" alt="{{ $clothing->category }}">
+                        @if($clothing->IMAGE_PATH)
+                            <img src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" alt="{{ $clothing->CATEGORY }}">
                         @else
                             <img class="clothing-img" src="" alt="画像なし">
                         @endif
                     </span>
                     <span style="flex-grow: 1;">
                         <div>
-                            {{ $clothing->category }}
+                            {{ $clothing->CATEGORY }}
                             @if($clothing->is_favorite)
                                 <span style="color: #d32f2f; font-weight: bold; margin-left: 8px;">❤ お気に入り</span>
                             @endif
