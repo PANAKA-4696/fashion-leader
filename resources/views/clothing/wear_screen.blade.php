@@ -5,32 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>服マスター管理</title>
 <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-
 <style>
     /* 画像の枠（80x80の正方形） */
     .img-box {
         width: 80px;
         height: 80px;
-        /* 余白ができても中央に画像が来るようにする */
         display: flex;
         align-items: center;
         justify-content: center;
-        
-        background-color: #f5f5f5; /* 背景色（画像が縦長のときに余白がわかるように） */
+        background-color: #f5f5f5;
         border-radius: 4px;
         margin-right: 15px;
-        overflow: hidden; /* はみ出した部分は隠す（念のため） */
-        flex-shrink: 0;   /* 枠が潰れないようにする */
+        overflow: hidden;
+        flex-shrink: 0;
     }
-
     /* 画像本体 */
     .clothing-img {
         width: 100%;
         height: 100%;
-        /* ★重要: アスペクト比を維持したまま、枠内に全体を収める */
         object-fit: contain; 
     }
-
     /* アイテムの行 */
     .item-line {
         display: flex;
@@ -42,7 +36,6 @@
         border-radius: 6px;
     }
 </style>
-
 </head>
 <body>
     <div class="header-nav">
@@ -55,7 +48,6 @@
             ここでは、アプリに登録されている<strong>すべての服（マスターデータ）</strong>を管理します。<br>
             ここでの変更や削除は、<strong>すべてのクローゼットに影響します</strong>のでご注意ください。
         </p>
-        <p style="font-size: 14px; color: #555;">（クローゼット内の服を非表示にする・入れ替える機能は、各クローゼットの詳細画面で行います）</p>
 
         <a href="wear-change" class="button">服の情報を変更</a>
         <a href="clothing-add" class="button primary">服を追加</a>
@@ -69,15 +61,12 @@
             <a href="/clothing/wear-screen" class="button" style="@if(!$selectedCategory) background-color: #d32f2f; color: white; @endif">すべて表示</a>
             @foreach($categories as $category)
                 @php
-                    $categoryUrl = '/clothing/wear-screen?category=' . urlencode($category);
-                    if ($selectedTag) {
-                        $categoryUrl .= '&tag=' . urlencode($selectedTag);
-                    }
-                    if ($selectedFavorite) {
-                        $categoryUrl .= '&favorite=' . $selectedFavorite;
-                    }
+                    // 現在のURLパラメータを維持しつつカテゴリだけ変える
+                    $params = request()->query();
+                    $params['category'] = $category;
+                    $url = '/clothing/wear-screen?' . http_build_query($params);
                 @endphp
-                <a href="{{ $categoryUrl }}" class="button" style="@if($selectedCategory === $category) background-color: #d32f2f; color: white; @endif">{{ $category }}</a>
+                <a href="{{ $url }}" class="button" style="@if($selectedCategory === $category) background-color: #d32f2f; color: white; @endif">{{ $category }}</a>
             @endforeach
         </div>
         
@@ -99,25 +88,27 @@
         </div>
         
         <script>
+            // フィルター操作時にURLを書き換えて移動する処理
             function updateFilters() {
-                const params = new URLSearchParams();
+                const params = new URLSearchParams(window.location.search);
                 
-                @if($selectedCategory)
-                    params.append('category', '{{ urlencode($selectedCategory) }}');
-                @endif
-                
+                // タグ
                 const tagSelect = document.getElementById('tag-select');
                 if (tagSelect.value) {
-                    params.append('tag', tagSelect.value);
+                    params.set('tag', tagSelect.value);
+                } else {
+                    params.delete('tag');
                 }
                 
+                // お気に入り
                 const favoriteCheckbox = document.getElementById('favorite-checkbox');
                 if (favoriteCheckbox.checked) {
-                    params.append('favorite', 'true');
+                    params.set('favorite', 'true');
+                } else {
+                    params.delete('favorite');
                 }
                 
-                const queryString = params.toString();
-                window.location.href = '/clothing/wear-screen' + (queryString ? '?' + queryString : '');
+                window.location.href = '/clothing/wear-screen?' + params.toString();
             }
             
             document.getElementById('tag-select').addEventListener('change', updateFilters);
@@ -129,35 +120,36 @@
                 <p class="item-line">
                     <span class="img-box">
                         @if($clothing->IMAGE_PATH)
-                            <img src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" class="clothing-img" alt="{{ $clothing->CATEGORY }}">
+                            <img class="clothing-img" src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" alt="{{ $clothing->CATEGORY }}">
                         @else
-                            <img class="clothing-img" src="" alt="画像なし">
+                            <img class="clothing-img" src="{{ asset('images/no_image.png') }}" alt="画像なし">
                         @endif
                     </span>
                     <span style="flex-grow: 1;">
                         <div>
-                            {{ $clothing->CATEGORY }}
-                            @if($clothing->is_favorite)
+                            <strong>{{ $clothing->ITEM_NAME }}</strong>
+                            <span style="font-size: 0.9em; color: #666;">({{ $clothing->CATEGORY }})</span>
+                            
+                            @if($clothing->IS_FAVORITE)
                                 <span style="color: #d32f2f; font-weight: bold; margin-left: 8px;">❤ お気に入り</span>
                             @endif
                         </div>
-                        @if($clothing->tags)
+                        
+                        @if($clothing->TAGS && count($clothing->TAGS) > 0)
                             <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                                @php
-                                    $tags = json_decode($clothing->tags, true) ?? [];
-                                @endphp
-                                @forelse($tags as $tag)
-                                    <span style="display: inline-block; background-color: #e0e0e0; padding: 2px 6px; margin-right: 4px; border-radius: 3px; font-size: 11px;">{{ $tag }}</span>
-                                @empty
-                                @endforelse
+                                @foreach($clothing->TAGS as $tag)
+                                    <span style="display: inline-block; background-color: #e0e0e0; padding: 2px 6px; margin-right: 4px; border-radius: 3px; font-size: 11px;">
+                                        {{ $tag }}
+                                    </span>
+                                @endforeach
                             </div>
                         @endif
                     </span>
                 </p>
             @empty
-                <p>登録された服がありません。<a href="clothing-add">服を追加</a>してください。</p>
+                <p>条件に一致する服が見つかりませんでした。</p>
             @endforelse
-            </div>
+        </div>
     </div>
 </body>
 </html>
