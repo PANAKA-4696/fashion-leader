@@ -230,33 +230,55 @@ class MainController extends Controller
         return redirect('/main/calendar');
     }
 
-    // =========================================================
-    // ▼ ここから下を書き換えてください
-    // =========================================================
-
     // 服マスター管理画面を表示する命令
-    public function wear_screen()
+    public function wear_screen(Request $request)
     {
-        // 1. Wearモデルを使ってデータを取得
-        // 'user_id' ではなく 'USER_ID' (大文字) なので注意！
-        $clothings = \App\Models\Wear::where('USER_ID', Auth::user()->USER_ID)->get();
+        $userId = Auth::user()->USER_ID;
         
-        // ※タグやお気に入りの絞り込み機能は、DBにカラムがないため一旦削除しました。
-        // 必要であれば、TAGテーブルやFAVORITEテーブルと結合する処理を後で追加しましょう。
-        
-        $categories = $clothings->pluck('CATEGORY')->unique()->sort()->values();
-        
-        // とりあえずタグ一覧は空にしておきます
-        $tags = collect([]); 
-        
-        // ビューに渡す変数名は、view側を変えなくて済むように $clothings のままにします
+        // 1. クエリの準備（まだ実行しません）
+        $query = \App\Models\Wear::where('USER_ID', $userId);
+
+        // ▼ カテゴリ絞り込み
+        if ($request->filled('category')) {
+            $query->where('CATEGORY', $request->category);
+        }
+
+        // ▼ お気に入り絞り込み
+        if ($request->input('favorite') === 'true') {
+            $query->where('IS_FAVORITE', true);
+        }
+
+        // ▼ タグ絞り込み (JSONカラムの中にそのタグが含まれているか)
+        if ($request->filled('tag')) {
+            $query->whereJsonContains('TAGS', $request->tag);
+        }
+
+        // 絞り込んだ結果を取得
+        $clothings = $query->get();
+
+
+        // --- フィルター用リスト（ドロップダウンの中身）の作成 ---
+        // 絞り込みに関係なく、ユーザーの全データからリストを作る必要があります
+        $allWears = \App\Models\Wear::where('USER_ID', $userId)->get();
+
+        // カテゴリ一覧
+        $categories = $allWears->pluck('CATEGORY')->unique()->sort()->values();
+
+        // タグ一覧 (JSON配列を取り出して、結合して、重複を消す)
+        $tags = $allWears->pluck('TAGS') // 全員のタグ配列を取得 [[春,夏], [秋], null...]
+            ->flatten()       // 平らにならす [春, 夏, 秋, null...]
+            ->filter()        // 空っぽを除去
+            ->unique()        // 重複を除去
+            ->sort()          // あいうえお順
+            ->values();       // 番号を振り直す
+
         return view('clothing.wear_screen', [
             'clothings' => $clothings,
             'categories' => $categories,
             'tags' => $tags,
-            'selectedCategory' => request()->query('category'),
-            'selectedTag' => request()->query('tag'),
-            'selectedFavorite' => request()->query('favorite'),
+            'selectedCategory' => $request->category,
+            'selectedTag' => $request->tag,
+            'selectedFavorite' => $request->favorite,
         ]);
     }
 
