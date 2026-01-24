@@ -3,44 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>服マスター情報変更 (2: 編集)</title>
+    <title>服マスター情報編集</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <style>
+        .preview-box {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
 </head>
 <body>
     <div class="header-nav">
         <h1>服マスター情報編集</h1>
-        <a href="wear-change">選択画面へ戻る</a>
+        <a href="/clothing/wear-change">選択画面へ戻る</a>
     </div>
     
     <div class="container">
         <p>
-            <strong>「{{ $clothing->category }} (ID: {{ $clothing->id }})」</strong>の情報を編集しています。
+            <strong>「{{ $clothing->CATEGORY }}」</strong>の情報を編集しています。
         </p>
         
-        <form action="/clothing/{{ $clothing->id }}" method="post" id="clothingForm" enctype="multipart/form-data">
+        <form action="/clothing/{{ $clothing->WEAR_ID }}" method="post" id="clothingForm" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             
             <label for="clothing_image">服の画像:</label>
             <input type="file" id="clothing_image" name="clothing_image" accept="image/*" onchange="previewImage(event)">
             <div class="preview-box">
-                @if($clothing->image_path)
-                    <img id="imagePreview" src="{{ asset('storage/' . $clothing->image_path) }}" alt="{{ $clothing->category }}" class="preview-img" style="display:block;">
+                @if($clothing->IMAGE_PATH)
+                    <img id="imagePreview" src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" alt="{{ $clothing->CATEGORY }}" class="preview-img" style="display:block;">
                 @else
                     <img id="imagePreview" src="" alt="画像プレビュー" class="preview-img" style="display:none;">
                 @endif
             </div>
             <br>
+            
             <label for="category">カテゴリ:</label>
             <select id="category" name="category" required>
-                <option value="アウター" @if($clothing->category === 'アウター') selected @endif>アウター</option>
-                <option value="シャツ" @if($clothing->category === 'シャツ') selected @endif>シャツ</option>
-                <option value="ボトムス" @if($clothing->category === 'ボトムス') selected @endif>ボトムス</option>
-                <option value="シューズ" @if($clothing->category === 'シューズ') selected @endif>シューズ</option>
-                <option value="ソックス" @if($clothing->category === 'ソックス') selected @endif>ソックス</option>
-                <option value="その他" @if($clothing->category === 'その他') selected @endif>その他</option>
+                <option value="アウター" @if($clothing->CATEGORY === 'アウター') selected @endif>アウター</option>
+                <option value="シャツ" @if($clothing->CATEGORY === 'シャツ') selected @endif>シャツ</option>
+                <option value="ボトムス" @if($clothing->CATEGORY === 'ボトムス') selected @endif>ボトムス</option>
+                <option value="シューズ" @if($clothing->CATEGORY === 'シューズ') selected @endif>シューズ</option>
+                <option value="ソックス" @if($clothing->CATEGORY === 'ソックス') selected @endif>ソックス</option>
+                <option value="その他" @if($clothing->CATEGORY === 'その他') selected @endif>その他</option>
             </select>
             <br>
+            
             <label for="tag_input">タグ:</label>
             <input type="text" id="tag_input" placeholder="タグを入力して Enter を押してください">
             <input type="hidden" id="tags" name="tags" value="">
@@ -54,11 +74,12 @@
             <div id="tagContainer" class="tag-container"></div>
             <br>
             
-            <label class="favorite-toggle-btn @if($clothing->is_favorite) favorited @endif" for="favorite-toggle">
-                <input type="checkbox" id="favorite-toggle" name="is_favorite" value="1" @if($clothing->is_favorite) checked @endif>
+            <label class="favorite-toggle-btn @if($clothing->IS_FAVORITE) favorited @endif" for="favorite-toggle">
+                <input type="checkbox" id="favorite-toggle" name="is_favorite" value="1" @if($clothing->IS_FAVORITE) checked @endif>
                 <span class="fav-icon">❤</span>
-                <span>@if($clothing->is_favorite)お気に入りに登録済み@else この服をお気に入り登録@endif</span>
+                <span>@if($clothing->IS_FAVORITE)お気に入りに登録済み@else この服をお気に入り登録@endif</span>
             </label>
+
             <input type="submit" value="変更を保存する" class="primary">
             <a href="/clothing/wear-change" class="button">キャンセル</a>
         </form>
@@ -66,8 +87,6 @@
 
     <script>
         let tags = [];
-        
-        // --- タグ入力機能 ---
         const tagInput = document.getElementById('tag_input');
         
         tagInput.addEventListener('keydown', function(e) {
@@ -108,7 +127,6 @@
             document.getElementById('tags').value = tags.join(',');
         }
         
-        // --- 画像プレビュー機能 ---
         function previewImage(event) {
             const file = event.target.files[0];
             if (file) {
@@ -122,7 +140,6 @@
             }
         }
 
-        // ▼▼ お気に入りボタン トグル用JS ▼▼
         document.getElementById('favorite-toggle').addEventListener('change', function() {
             const btn = this.closest('.favorite-toggle-btn');
             if (this.checked) {
@@ -133,20 +150,17 @@
                 btn.querySelector('span:last-child').textContent = 'この服をお気に入り登録';
             }
         });
-        // ▲▲ お気に入りボタン トグル用JS ▲▲
 
-        // 初期化時に既存のタグを読み込む
+        // ▼ 修正箇所: ここが大文字(TAGS)になっていないと表示されません！
         document.addEventListener('DOMContentLoaded', function() {
-            const tagsJSON = '{{ $clothing->tags ?? "[]" }}';
-            try {
-                const parsedTags = JSON.parse(tagsJSON.replace(/&quot;/g, '"'));
-                if (Array.isArray(parsedTags)) {
-                    tags = parsedTags;
-                    updateTagDisplay();
-                    updateHiddenInput();
-                }
-            } catch(e) {
-                console.error('タグのパースエラー:', e);
+            // PHPの変数をJSに渡す (Modelのcastsで配列になっているので、json_encodeして渡すのが正解)
+            // もしnullなら空配列 "[]" を渡す
+            const tagsFromDB = @json($clothing->TAGS ?? []);
+            
+            if (Array.isArray(tagsFromDB)) {
+                tags = tagsFromDB;
+                updateTagDisplay();
+                updateHiddenInput();
             }
         });
     </script>

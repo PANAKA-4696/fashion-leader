@@ -24,7 +24,16 @@ class Wear extends Model
         'ITEM_NAME',
         'CATEGORY',
         'IMAGE_PATH',
-        'USER_ID'
+        'USER_ID',
+        'TAGS',        // ★追加
+        'IS_FAVORITE'  // ★追加
+    ];
+
+    // ★追加: キャスト設定（自動変換）
+    // DBから取り出したときに、TAGSを自動で配列に、IS_FAVORITEをtrue/falseにしてくれます
+    protected $casts = [
+        'TAGS' => 'array',
+        'IS_FAVORITE' => 'boolean',
     ];
 
     /**
