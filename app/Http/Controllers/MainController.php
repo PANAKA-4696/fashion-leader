@@ -230,98 +230,64 @@ class MainController extends Controller
         return redirect('/main/calendar');
     }
 
+    // =========================================================
+    // ▼ ここから下を書き換えてください
+    // =========================================================
+
     // 服マスター管理画面を表示する命令
     public function wear_screen()
     {
-        // フィルタパラメータを取得
-        $selectedCategory = request()->query('category', null);
-        $selectedTag = request()->query('tag', null);
-        $selectedFavorite = request()->query('favorite', null);
+        // 1. Wearモデルを使ってデータを取得
+        // 'user_id' ではなく 'USER_ID' (大文字) なので注意！
+        $clothings = \App\Models\Wear::where('USER_ID', Auth::user()->USER_ID)->get();
         
-        // フィルタリングロジック
-        $clothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get();
+        // ※タグやお気に入りの絞り込み機能は、DBにカラムがないため一旦削除しました。
+        // 必要であれば、TAGテーブルやFAVORITEテーブルと結合する処理を後で追加しましょう。
         
-        // カテゴリでフィルタリング
-        if ($selectedCategory) {
-            $clothings = $clothings->filter(function($clothing) use ($selectedCategory) {
-                return $clothing->category === $selectedCategory;
-            });
-        }
+        $categories = $clothings->pluck('CATEGORY')->unique()->sort()->values();
         
-        // タグでフィルタリング
-        if ($selectedTag) {
-            $clothings = $clothings->filter(function($clothing) use ($selectedTag) {
-                $tags = json_decode($clothing->tags, true) ?? [];
-                return in_array($selectedTag, $tags);
-            });
-        }
+        // とりあえずタグ一覧は空にしておきます
+        $tags = collect([]); 
         
-        // お気に入りでフィルタリング
-        if ($selectedFavorite === 'true') {
-            $clothings = $clothings->filter(function($clothing) {
-                return $clothing->is_favorite === true;
-            });
-        }
-        
-        // カテゴリ一覧を取得
-        $allClothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get();
-        $categories = $allClothings->pluck('category')->unique()->sort()->values();
-        
-        // タグ一覧を取得
-        $allTags = collect();
-        $allClothings->each(function($clothing) use (&$allTags) {
-            $tags = json_decode($clothing->tags, true) ?? [];
-            $allTags = $allTags->concat($tags);
-        });
-        $tags = $allTags->unique()->sort()->values();
-        
-        // resources/views/clothing/wear_screen.blade.php を表示せよという意味
+        // ビューに渡す変数名は、view側を変えなくて済むように $clothings のままにします
         return view('clothing.wear_screen', [
             'clothings' => $clothings,
             'categories' => $categories,
             'tags' => $tags,
-            'selectedCategory' => $selectedCategory,
-            'selectedTag' => $selectedTag,
-            'selectedFavorite' => $selectedFavorite,
+            'selectedCategory' => request()->query('category'),
+            'selectedTag' => request()->query('tag'),
+            'selectedFavorite' => request()->query('favorite'),
         ]);
-        
     }
 
-    //服の情報変更画面を表示する命令
+    // 服の情報変更画面を表示する命令
     public function wear_change()
     {
-        // データベースから全ての服を取得
-        $clothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get(); // ★修正
-        // resources/views/clothing/wear_change.blade.php を表示せよという意味
+        $clothings = \App\Models\Wear::where('USER_ID', Auth::user()->USER_ID)->get();
         return view('clothing.wear_change', ['clothings' => $clothings]);
-        
     }
 
-    //服の情報編集画面を表示する命令
+    // 服の情報編集画面を表示する命令
     public function wear_item_change($id)
     {
-        // IDから服の情報を取得
-        // 修正後：IDが一致し、かつ USER_ID が自分のものだけを取得（なければ404エラー）
-        $clothing = \App\Models\Clothing::where('id', $id)
-            ->where('user_id', Auth::user()->USER_ID)
+        // IDで検索（Wearモデルは主キーが WEAR_ID なので find() ではなく where で探すのが無難）
+        $clothing = \App\Models\Wear::where('WEAR_ID', $id)
+            ->where('USER_ID', Auth::user()->USER_ID)
             ->firstOrFail();
-        // resources/views/clothing/wear_item_change.blade.php を表示せよという意味
+
         return view('clothing.wear_item_change', ['clothing' => $clothing]);
     }
 
-    //服の追加画面を表示する命令
+    // 服の追加画面を表示する命令
     public function wear_add()
     {
-        // resources/views/clothing/clothing_add.blade.php を表示せよという意味
         return view('clothing.clothing_add');
-        
     }
-    //服削除画面を表示する命令
+
+    // 服削除画面を表示する命令
     public function wear_delete()
     {
-        // データベースから全ての服を取得
-        $clothings = \App\Models\Clothing::where('user_id', Auth::user()->USER_ID)->get(); // ★修正
-        // resources/views/clothing/wear_delete.blade.php を表示せよという意味
+        $clothings = \App\Models\Wear::where('USER_ID', Auth::user()->USER_ID)->get();
         return view('clothing.wear_delete', ['clothings' => $clothings]);
     }
 }
