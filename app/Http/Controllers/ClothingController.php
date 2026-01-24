@@ -15,49 +15,40 @@ class ClothingController extends Controller
         // 1. バリデーション
         $request->validate([
             'category' => 'required',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 容量制限(5MB)など
+            // ↓ ここを clothing_image に変更
+            'clothing_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
         $user = Auth::user();
         $userId = $user->USER_ID;
 
         // 2. 自動連番の生成処理
-        // DBから「このユーザーの、最後のWEAR_ID」を取得する
-        // ID形式: W + US000001 + 000001 (計15文字)
-        // 最後の6文字が連番部分
-        
         $lastWear = Wear::where('USER_ID', $userId)
-            ->orderBy('WEAR_ID', 'desc') // IDの降順（大きい順）で並べて
-            ->first(); // 最初の一つ（つまり最新）を取る
+            ->orderBy('WEAR_ID', 'desc')
+            ->first();
 
-        $nextNumber = 1; // データが何もない場合は 1 からスタート
+        $nextNumber = 1;
 
         if ($lastWear) {
-            // 既存データがある場合、IDの後ろ6文字を切り取って数字に変換し、+1する
-            // substr(文字列, -6) で末尾6文字を取得
             $lastNumber = intval(substr($lastWear->WEAR_ID, -6));
             $nextNumber = $lastNumber + 1;
         }
 
-        // 6桁になるように0埋めする (例: 1 -> "000001")
         $seqStr = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
-
-        // IDの完成: W + US000001 + 000001
         $wearId = 'W' . $userId . $seqStr;
 
 
-        // 3. 画像の保存処理 (ファイル名指定)
+        // 3. 画像の保存処理
         $imagePath = null;
         
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $extension = $file->getClientOriginalExtension(); // 拡張子を取得 (jpg, pngなど)
+        // ↓ ここも clothing_image に変更！
+        if ($request->hasFile('clothing_image')) {
+            $file = $request->file('clothing_image'); // ↓ ここも
+            $extension = $file->getClientOriginalExtension();
             
-            // ファイル名: WIMG + US000001 + 000001 . jpg
             $fileName = 'WIMG' . $userId . $seqStr . '.' . $extension;
 
-            // storeAs を使うとファイル名を指定して保存できます
-            // 保存場所: storage/app/public/wear/ファイル名
+            // フォルダがなければここで自動作成されます
             $path = $file->storeAs('wear', $fileName, 'public');
             
             $imagePath = $path;

@@ -5,6 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>服マスター管理</title>
 <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+
+<style>
+    /* 画像の枠（80x80の正方形） */
+    .img-box {
+        width: 80px;
+        height: 80px;
+        /* 余白ができても中央に画像が来るようにする */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        background-color: #f5f5f5; /* 背景色（画像が縦長のときに余白がわかるように） */
+        border-radius: 4px;
+        margin-right: 15px;
+        overflow: hidden; /* はみ出した部分は隠す（念のため） */
+        flex-shrink: 0;   /* 枠が潰れないようにする */
+    }
+
+    /* 画像本体 */
+    .clothing-img {
+        width: 100%;
+        height: 100%;
+        /* ★重要: アスペクト比を維持したまま、枠内に全体を収める */
+        object-fit: contain; 
+    }
+
+    /* アイテムの行 */
+    .item-line {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ddd;
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #fff;
+        border-radius: 6px;
+    }
+</style>
+
 </head>
 <body>
     <div class="header-nav">
@@ -91,7 +129,7 @@
                 <p class="item-line">
                     <span class="img-box">
                         @if($clothing->IMAGE_PATH)
-                            <img src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" alt="{{ $clothing->CATEGORY }}">
+                            <img src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" class="clothing-img" alt="{{ $clothing->CATEGORY }}">
                         @else
                             <img class="clothing-img" src="" alt="画像なし">
                         @endif
