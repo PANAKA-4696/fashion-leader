@@ -3,126 +3,92 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Clothing;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Auth; // ★追加：これが必要です
+use App\Models\Wear;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage; // ファイル操作用
 
 class ClothingController extends Controller
 {
-    /**
-     * 服の追加フォーム表示
-     */
-    public function create()
-    {
-        return view('clothing.clothing_add');
-    }
-
-    /**
-     * 服をデータベースに保存
-     */
+    // 服を保存する処理
     public function store(Request $request)
     {
-        // バリデーション
-        $validated = $request->validate([
-            'clothing_image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'category' => 'required|string',
-            'tags' => 'nullable|string',
-            'is_favorite' => 'nullable|in:0,1',
+        // 1. バリデーション
+        $request->validate([
+            'category' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // 容量制限(5MB)など
         ]);
 
-        // 画像の保存
+        $user = Auth::user();
+        $userId = $user->USER_ID;
+
+        // 2. 自動連番の生成処理
+        // DBから「このユーザーの、最後のWEAR_ID」を取得する
+        // ID形式: W + US000001 + 000001 (計15文字)
+        // 最後の6文字が連番部分
+        
+        $lastWear = Wear::where('USER_ID', $userId)
+            ->orderBy('WEAR_ID', 'desc') // IDの降順（大きい順）で並べて
+            ->first(); // 最初の一つ（つまり最新）を取る
+
+        $nextNumber = 1; // データが何もない場合は 1 からスタート
+
+        if ($lastWear) {
+            // 既存データがある場合、IDの後ろ6文字を切り取って数字に変換し、+1する
+            // substr(文字列, -6) で末尾6文字を取得
+            $lastNumber = intval(substr($lastWear->WEAR_ID, -6));
+            $nextNumber = $lastNumber + 1;
+        }
+
+        // 6桁になるように0埋めする (例: 1 -> "000001")
+        $seqStr = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
+        // IDの完成: W + US000001 + 000001
+        $wearId = 'W' . $userId . $seqStr;
+
+
+        // 3. 画像の保存処理 (ファイル名指定)
         $imagePath = null;
-        if ($request->hasFile('clothing_image')) {
-            $file = $request->file('clothing_image');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $imagePath = $file->storeAs('clothing', $filename, 'public');
+        
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $extension = $file->getClientOriginalExtension(); // 拡張子を取得 (jpg, pngなど)
+            
+            // ファイル名: WIMG + US000001 + 000001 . jpg
+            $fileName = 'WIMG' . $userId . $seqStr . '.' . $extension;
+
+            // storeAs を使うとファイル名を指定して保存できます
+            // 保存場所: storage/app/public/wear/ファイル名
+            $path = $file->storeAs('wear', $fileName, 'public');
+            
+            $imagePath = $path;
         }
 
-        // タグの配列化
-        $tags = [];
-        if (!empty($validated['tags'])) {
-            $tags = array_filter(array_map('trim', explode(',', $validated['tags'])));
-        }
-
-        // 服の保存
-        Clothing::create([
-            'user_id' => Auth::user()->USER_ID, // ★追加：自分のIDを登録
-            'name' => $validated['category'],
-            'category' => $validated['category'],
-            'tags' => json_encode($tags),
-            'image_path' => $imagePath,
-            'is_favorite' => $request->has('is_favorite') ? true : false,
+        // 4. データベース登録
+        Wear::create([
+            'WEAR_ID'    => $wearId,
+            'USER_ID'    => $userId,
+            'ITEM_NAME'  => $request->input('name') ?? $request->input('category'),
+            'CATEGORY'   => $request->input('category'),
+            'IMAGE_PATH' => $imagePath,
         ]);
 
-        // 服管理画面にリダイレクト
-        return redirect('/clothing/wear-screen')->with('success', '服をマスターに追加しました。');
+        return redirect('/clothing/wear-screen')->with('success', '服を登録しました！');
     }
 
-    /**
-     * 服を削除
-     */
+    // 服を削除する処理
     public function destroy($id)
     {
-        // ★修正：自分の持っている服の中から探す（他人の服は消せないようにする）
-        $clothing = Clothing::where('id', $id)
-            ->where('user_id', Auth::user()->USER_ID)
-            ->firstOrFail();
-        
-        // 画像ファイルの削除
-        if ($clothing->image_path && Storage::disk('public')->exists($clothing->image_path)) {
-            Storage::disk('public')->delete($clothing->image_path);
-        }
-        
-        $clothing->delete();
-        
-        return redirect('/clothing/wear-screen')->with('success', '服をマスターから削除しました。');
-    }
+        $wear = Wear::where('WEAR_ID', $id)
+                    ->where('USER_ID', Auth::user()->USER_ID)
+                    ->firstOrFail();
 
-    /**
-     * 服の編集（画像とメタ情報の更新）
-     */
-    public function update(Request $request, $id)
-    {
-        // ★修正：自分の持っている服の中から探す
-        $clothing = Clothing::where('id', $id)
-            ->where('user_id', Auth::user()->USER_ID)
-            ->firstOrFail();
-
-        // バリデーション
-        $validated = $request->validate([
-            'clothing_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'category' => 'required|string',
-            'tags' => 'nullable|string',
-            'is_favorite' => 'nullable|in:0,1',
-        ]);
-
-        // 新しい画像がある場合、古い画像を削除して新しいものを保存
-        if ($request->hasFile('clothing_image')) {
-            if ($clothing->image_path && Storage::disk('public')->exists($clothing->image_path)) {
-                Storage::disk('public')->delete($clothing->image_path);
-            }
-            
-            $file = $request->file('clothing_image');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $imagePath = $file->storeAs('clothing', $filename, 'public');
-            $clothing->image_path = $imagePath;
+        // 実際の画像ファイルも削除する（ゴミを残さない）
+        if ($wear->IMAGE_PATH) {
+            Storage::disk('public')->delete($wear->IMAGE_PATH);
         }
 
-        // タグの配列化
-        $tags = [];
-        if (!empty($validated['tags'])) {
-            $tags = array_filter(array_map('trim', explode(',', $validated['tags'])));
-        }
+        $wear->delete();
 
-        // 情報を更新
-        $clothing->update([
-            'name' => $validated['category'],
-            'category' => $validated['category'],
-            'tags' => json_encode($tags),
-            'is_favorite' => $request->has('is_favorite') ? true : false,
-        ]);
-
-        // 服管理画面にリダイレクト
-        return redirect('/clothing/wear-screen')->with('success', '服の情報を更新しました。');
+        return redirect('/clothing/wear-screen')->with('success', '服を削除しました。');
     }
 }
