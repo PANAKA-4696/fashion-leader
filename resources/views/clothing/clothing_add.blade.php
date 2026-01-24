@@ -5,11 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服マスター登録</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <style>
+        /* 編集画面と同じプレビュースタイル */
+        .preview-box {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+    </style>
 </head>
 <body>
     <div class="header-nav">
         <h1>服マスター登録</h1>
-        <a href="javascript:history.back()" style="color: white; text-decoration: none;">戻る</a>
+        <a href="/clothing/wear-screen" style="color: white; text-decoration: none;">戻る</a>
     </div>
     
     <div class="container">
@@ -31,10 +50,12 @@
             
             <label for="clothing_image">服の画像:</label>
             <input type="file" id="clothing_image" name="clothing_image" accept="image/*" required onchange="previewImage(event)">
+            
             <div class="preview-box">
                 <img id="imagePreview" src="" alt="画像プレビュー" class="preview-img" style="display:none;">
             </div>
             <br>
+
             <label for="category">カテゴリ:</label>
             <select id="category" name="category" required>
                 <option value="アウター">アウター</option>
@@ -45,9 +66,11 @@
                 <option value="その他">その他</option>
             </select>
             <br>
+
             <label for="tag_input">タグ:</label>
             <input type="text" id="tag_input" placeholder="タグを入力して Enter を押してください">
             <input type="hidden" id="tags" name="tags" value="">
+            
             <div class="preset-tags">
                 <button type="button" class="preset-tag" onclick="addTag('フォーマル')">フォーマル</button>
                 <button type="button" class="preset-tag" onclick="addTag('カジュアル')">カジュアル</button>
@@ -63,10 +86,10 @@
                 <span class="fav-icon">❤</span>
                 <span>この服をお気に入り登録</span>
             </label>
+
             <input type="submit" value="マスターに追加する" class="primary">
-            
-            <a href="javascript:history.back()" class="button">キャンセル</a>
-            </form>
+            <a href="/clothing/wear-screen" class="button">キャンセル</a>
+        </form>
     </div>
     
     <script>
@@ -85,6 +108,7 @@
         
         function addTag(tag) {
             const trimmedTag = tag.trim();
+            // 重複チェック
             if (trimmedTag && !tags.includes(trimmedTag)) {
                 tags.push(trimmedTag);
                 updateTagDisplay();
@@ -110,6 +134,7 @@
         }
         
         function updateHiddenInput() {
+            // 配列をカンマ区切りの文字列にして隠しフィールドに入れる (例: "春,カジュアル")
             document.getElementById('tags').value = tags.join(',');
         }
 
@@ -127,7 +152,7 @@
             }
         }
         
-        // ▼▼ お気に入りボタン トグル用JS ▼▼
+        // --- お気に入りボタンの見た目切り替え ---
         document.getElementById('favorite-toggle').addEventListener('change', function() {
             const btn = this.closest('.favorite-toggle-btn');
             if (this.checked) {
@@ -138,7 +163,6 @@
                 btn.querySelector('span:last-child').textContent = 'この服をお気に入り登録';
             }
         });
-        // ▲▲ お気に入りボタン トグル用JS ▲▲
     </script>
 </body>
 </html>
