@@ -5,6 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>服マスター削除 (選択)</title>
 <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+<style>
+    /* 画像の表示調整用スタイル */
+    .img-box {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        margin-right: 15px;
+        overflow: hidden;
+    }
+    .clothing-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    .image-select-item {
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+    }
+    /* ラジオボタンとラベルの配置調整 */
+    .image-select-item input[type="radio"] {
+        margin-right: 10px;
+        transform: scale(1.5); /* ラジオボタンを少し大きく */
+    }
+    .image-select-item label {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        cursor: pointer;
+    }
+</style>
 </head>
 <body>
     <div class="header-nav">
@@ -26,20 +64,19 @@
             <div class="image-select-list">
                 @forelse($clothings as $clothing)
                 <div class="image-select-item">
-                    <input type="radio" id="item_{{ $clothing->id }}" name="delete_id" value="{{ $clothing->id }}" required>
-                    <label for="item_{{ $clothing->id }}">
+                    <input type="radio" id="item_{{ $clothing->WEAR_ID }}" name="delete_id" value="{{ $clothing->WEAR_ID }}" required>
+                    
+                    <label for="item_{{ $clothing->WEAR_ID }}">
                         <span class="img-box">
-                            @if($clothing->image_path)
-                                <img class="clothing-img" src="{{ asset('storage/' . $clothing->image_path) }}" alt="{{ $clothing->category }}">
+                            @if($clothing->IMAGE_PATH)
+                                <img class="clothing-img" src="{{ asset('storage/' . $clothing->IMAGE_PATH) }}" alt="{{ $clothing->CATEGORY }}">
                             @else
-                                <img class="clothing-img" src="" alt="画像なし">
+                                <img class="clothing-img" src="{{ asset('images/no_image.png') }}" alt="画像なし">
                             @endif
                         </span>
                         <span>
-                            {{ $clothing->category }}
-                            @if($clothing->is_favorite)
-                                <span class="favorite-display">❤</span>
-                            @endif
+                            <strong>{{ $clothing->ITEM_NAME }}</strong><br>
+                            <span style="font-size: 0.9em; color: #666;">{{ $clothing->CATEGORY }}</span>
                         </span>
                     </label>
                 </div>
@@ -49,7 +86,7 @@
             </div>
             <hr>
             @if($clothings->count() > 0)
-            <button type="button" onclick="submitDelete()" class="danger">選択した服をマスターから削除</button>
+            <button type="button" onclick="submitDelete()" class="button danger">選択した服をマスターから削除</button>
             @endif
             <a href="wear-screen" class="button">キャンセル</a>
         </form>
@@ -61,7 +98,9 @@
         
         <script>
             function submitDelete() {
+                // ラジオボタンで選択された値を取得
                 const selectedId = document.querySelector('input[name="delete_id"]:checked');
+                
                 if (!selectedId) {
                     alert('削除する服を選択してください。');
                     return;
@@ -69,6 +108,7 @@
                 
                 if(confirm('本当にこのアイテムをマスターから削除しますか？')) {
                     const deleteForm = document.getElementById('deleteForm');
+                    // フォームの送信先を動的に書き換え: /clothing/WEAR_ID
                     deleteForm.action = '/clothing/' + selectedId.value;
                     deleteForm.submit();
                 }
