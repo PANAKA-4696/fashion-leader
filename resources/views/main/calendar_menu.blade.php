@@ -18,6 +18,10 @@
             cursor: pointer;
             border: 1px solid #eee;
             transition: background-color 0.2s;
+            height: 80px;
+            vertical-align: top;
+            padding: 5px;
+            width: 14%;
         }
 
         .calendar-table td.today {
@@ -31,9 +35,10 @@
         }
 
         .coord-icon {
-            font-size: 12px;
+            font-size: 14px;
             display: block;
-            margin-top: 2px;
+            margin-top: 5px;
+            text-align: center;
         }
 
         .button-group {
@@ -127,7 +132,8 @@
             }
         };
 
-        let currentDate = new Date(2026, 0, 1);
+        // 初期表示を現在の月に設定
+        let currentDate = new Date();
 
         async function renderCalendar(date) {
             const calendarBody = document.getElementById("calendar-body");
@@ -147,8 +153,11 @@
                 let row = document.createElement("tr");
                 for (let j = 0; j < 7; j++) {
                     let cell = document.createElement("td");
+                    
                     if (i === 0 && j < firstDay || dateCount > lastDate) {
                         cell.innerText = "";
+                        cell.style.backgroundColor = "#f9f9f9";
+                        cell.style.cursor = "default";
                     } else {
                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dateCount).padStart(2, '0')}`;
                         cell.innerText = dateCount;
@@ -156,7 +165,8 @@
 
                         if (dateStr === todayStr) cell.classList.add("today");
 
-                        if (monthlyStatus[dateStr] && monthlyStatus[dateStr].img) {
+                        // ▼ マス目はシンプルにアイコン表示（登録があれば）
+                        if (monthlyStatus[dateStr] && (monthlyStatus[dateStr].isRegistered || monthlyStatus[dateStr].img)) {
                             const icon = document.createElement("div");
                             icon.className = "coord-icon";
                             icon.innerText = "👗";
@@ -174,6 +184,7 @@
             autoSelectCurrentDay();
         }
 
+        // ▼▼ 画像表示の修正箇所はここです ▼▼
         function selectDate(dateStr, status) {
             document.querySelectorAll(".calendar-table td").forEach(td => td.classList.remove("selected"));
             const target = document.querySelector(`td[data-date="${dateStr}"]`);
@@ -183,27 +194,35 @@
             const actionContainer = document.getElementById("action-buttons");
             const previewContent = document.getElementById("preview-content");
 
-            if (!status) {
+            const editUrl = `/main/closet_edit?date=${dateStr}`;
+            const checkUrl = `/main/closet_clothes?date=${dateStr}`;
+
+            if (!status || (!status.isRegistered && !status.img)) {
+                // まだ登録がない場合
                 previewContent.innerHTML = `<p style="color:#999;">コーデは未登録です</p>`;
                 actionContainer.innerHTML = `
-                    <a href="/main/closet_edit?date=${dateStr}" class="primary-btn">➕ コーデを登録する</a>
+                    <a href="${editUrl}" class="primary-btn">➕ コーデを登録する</a>
                 `;
             } else if (!status.img) {
+                // 登録はあるが画像がない場合
                 previewContent.innerHTML = `<p style="color:#999;">全体像は未登録です</p>`;
                 actionContainer.innerHTML = `
-                    <a href="/main/closet_clothes?date=${dateStr}" class="primary-btn">🔍 この日のコーデを確認</a>
-                    <a href="/main/closet_edit?date=${dateStr}" class="primary-btn">✏️ この日のコーデを変更</a>
+                    <a href="${checkUrl}" class="primary-btn">🔍 この日のコーデを確認</a>
+                    <a href="${editUrl}" class="primary-btn">✏️ この日のコーデを変更</a>
                 `;
             } else {
+                // 画像がある場合（ここが修正ポイント！）
+                // src に "/storage/" を付けることで画像が表示されます
                 previewContent.innerHTML = `
-                    <img src="${status.img}" style="max-height:100px; border-radius:8px; border:1px solid #ddd;">
+                    <img src="/storage/${status.img}" style="max-height:200px; max-width:100%; border-radius:8px; border:1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                 `;
                 actionContainer.innerHTML = `
-                    <a href="/main/closet_clothes?date=${dateStr}" class="primary-btn">🔍 この日のコーデを確認</a>
-                    <a href="/main/closet_edit?date=${dateStr}" class="primary-btn">✏️ この日のコーデを変更</a>
+                    <a href="${checkUrl}" class="primary-btn">🔍 この日のコーデを確認</a>
+                    <a href="${editUrl}" class="primary-btn">✏️ この日のコーデを変更</a>
                 `;
             }
         }
+        // ▲▲ 修正箇所終わり ▲▲
 
         function autoSelectCurrentDay() {
             const today = new Date();
@@ -211,6 +230,7 @@
             const todayCell = document.querySelector(`td[data-date="${todayStr}"]`);
             if (todayCell) todayCell.click();
             else {
+                // 今月表示で今日がない場合、1日を選択
                 const firstCell = document.querySelector('td[data-date]');
                 if (firstCell) firstCell.click();
             }
