@@ -15,33 +15,86 @@ class MainController extends Controller
     }
 
     // ▼ 今日のコーデ確認画面
-    public function closet_clothes(Request $request) { return view('main.closet_clothes', [ 'date' => $request->date ]); }
+    public function closet_clothes(Request $request)
+    {
+        $userId = Auth::user()->USER_ID;
+        $date = $request->date; // 例: 2026-01-26
+
+        // 日付を分解
+        [$y, $m, $d] = explode('-', $date);
+
+        // 1. その日のコーデデータを取得
+        // CALENDAR -> TODAY_CODE -> CODE と繋いで画像パスなどを取ります
+        $code = DB::table('CALENDAR')
+            ->join('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
+            ->join('CODE', 'TODAY_CODE.CODE_ID', '=', 'CODE.CODE_ID')
+            ->where('CALENDAR.USER_ID', $userId)
+            ->where('CALENDAR.CAL_YEAR', $y)
+            ->where('CALENDAR.CAL_MONTH', $m)
+            ->where('CALENDAR.CAL_DATE', $d)
+            ->select('CODE.*') // CODEテーブルの全データ（IMAGE_PATHなど）を取得
+            ->first();
+
+        // 2. そのコーデに使われている服たちも取得（表示用）
+        $wears = [];
+        if ($code) {
+            $wears = DB::table('WEAR_CODE')
+                ->join('WEAR', 'WEAR_CODE.WEAR_ID', '=', 'WEAR.WEAR_ID')
+                ->where('WEAR_CODE.CODE_ID', $code->CODE_ID)
+                ->select('WEAR.*')
+                ->get();
+        }
+
+        return view('main.closet_clothes', [
+            'date'  => $date,
+            'code'  => $code,   // コーデ情報（画像など）
+            'wears' => $wears,  // 使った服リスト
+        ]);
+    }
 
     // ▼ 今日のコーデ登録・変更画面
     public function closet_edit(Request $request)
     {
-        // // ★修正：ログインチェックを追加
-        // // セッション切れなどでユーザー情報がない場合、ログイン画面へ強制送還する
-        // if (!Auth::check()) {
-        //     return redirect()->route('login')->with('error', 'ログインしてください。');
-        // }
-
-        // ここまで来れば安全にIDを取得できる
         $userId = Auth::user()->USER_ID;
-
-        $wears = DB::table('WEAR')
-            ->where('USER_ID', $userId)
-            ->get();
-
         // URLに日付があればそれを使う、なければ今日
         $date = $request->date ?? date('Y-m-d');
+        [$y, $m, $d] = explode('-', $date);
+
+        // 1. ユーザーの全服データを取得（選択リスト用）
+        $wears = \App\Models\Wear::where('USER_ID', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // 2. その日のコーデが既に登録されているか確認
+        // CALENDAR -> TODAY_CODE -> CODE の順で繋いでデータを取ってきます
+        $existingCoord = DB::table('CALENDAR')
+            ->join('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
+            ->join('CODE', 'TODAY_CODE.CODE_ID', '=', 'CODE.CODE_ID')
+            ->where('CALENDAR.USER_ID', $userId)
+            ->where('CALENDAR.CAL_YEAR', $y)
+            ->where('CALENDAR.CAL_MONTH', $m)
+            ->where('CALENDAR.CAL_DATE', $d)
+            ->select('CODE.*') // コーデの全情報（画像、タグ、お気に入りなど）を取得
+            ->first();
+
+        // 3. そのコーデに使われている服のIDリストを取得
+        $selectedWearIds = [];
+        if ($existingCoord) {
+            $selectedWearIds = DB::table('WEAR_CODE')
+                ->where('CODE_ID', $existingCoord->CODE_ID)
+                ->pluck('WEAR_ID')
+                ->toArray();
+        }
 
         return view('main.closet_entry_or_change', [
-            'wears' => $wears,
-            'date'  => $date
+            'wears'           => $wears,           // 全服リスト
+            'date'            => $date,            // 対象日付
+            'existingCoord'   => $existingCoord,   // 登録済みのコーデ情報 (なければ null)
+            'selectedWearIds' => $selectedWearIds, // 選ばれている服IDの配列
         ]);
     }
 
+    
     // ▼ カレンダー用 API
     public function getMonthlyStatus(Request $request)
     {
@@ -141,35 +194,49 @@ class MainController extends Controller
         return response()->json($result);
     }
 
-    // ▼ 今日のコーデ登録
+    // ▼ 今日のコーデ登録処理
     public function saveCoord(Request $request)
     {
-        $date = $request->date;
-        // 変更後
         $userId = Auth::user()->USER_ID;
+        $date = $request->date;
         $wearIds = $request->clothing_ids ?? [];
-
         [$y, $m, $d] = explode('-', $date);
 
-        // コーデID作成
-        $codeId = 'C' . strtoupper(substr(uniqid(), -7));
+        // ★追加: タグとお気に入りデータの準備
+        $tagsInput = $request->input('tags');
+        // 日本語をそのまま保存できるように、JSONエンコード時にオプションを指定
+        $tagsJson = $tagsInput ? json_encode(explode(',', $tagsInput), JSON_UNESCAPED_UNICODE) : null;
+        $isFavorite = $request->has('is_favorite') ? 1 : 0;
 
-        // 全体写真の保存
-        $imagePath = 'images/default_coord.jpg';
+        // 画像保存処理
+        $imagePath = null;
+        // もし既存の画像があればそれを引き継ぎたいところですが、
+        // 今回はシンプルに「新規画像があれば保存」というロジックにします
         if ($request->hasFile('coord_image')) {
             $storedPath = $request->file('coord_image')->store('coord', 'public');
-            $imagePath = 'storage/' . $storedPath;
+            $imagePath = $storedPath; // storeメソッドはハッシュ名を返すのでそのまま使う
+        } else {
+            // 画像がアップされず、既存のコーデがある場合は、古い画像のパスを引き継ぐ処理が必要かも
+            // 一旦シンプルにするため、ここでは新規アップロードのみ扱います
         }
 
-        // CODE 登録
+        // --- データ保存 (既存ロジック: 毎回新しいCODE IDを発行して付け替える方式) ---
+        // ※ 本格的には update も検討すべきですが、履歴管理の観点から「新規作成＆付け替え」でもOKです
+
+        $codeId = 'C' . strtoupper(substr(uniqid(), -7));
+
         DB::table('CODE')->insert([
-            'CODE_ID'   => $codeId,
-            'USER_ID'   => $userId,
-            'CODE_NAME' => $date . ' のコーデ',
-            'IMAGE_PATH'=> $imagePath,
+            'CODE_ID'     => $codeId,
+            'USER_ID'     => $userId,
+            'CODE_NAME'   => $date . ' のコーデ',
+            'IMAGE_PATH'  => $imagePath, // 画像がない場合はNULLになります
+            'TAGS'        => $tagsJson,   // ★追加
+            'IS_FAVORITE' => $isFavorite, // ★追加
+            'created_at'  => now(),
+            'updated_at'  => now(),
         ]);
 
-        // WEAR_CODE 登録
+        // 服との紐付け (WEAR_CODE)
         foreach ($wearIds as $wearId) {
             DB::table('WEAR_CODE')->insert([
                 'CODE_ID' => $codeId,
@@ -177,34 +244,38 @@ class MainController extends Controller
             ]);
         }
 
-        // カレンダー登録
-        DB::table('CALENDAR')->updateOrInsert(
-            [
-                'USER_ID' => $userId,
-                'CAL_YEAR' => $y,
-                'CAL_MONTH' => $m,
-                'CAL_DATE' => $d
-            ],
-            [
-                'CALENDAR_ID' => uniqid('CAL')
-            ]
-        );
-
-        // カレンダーID取得
-        $calendarId = DB::table('CALENDAR')
+        // カレンダー登録 (CALENDAR)
+        // updateOrInsert でIDを取得したいため、一度検索してから処理
+        $calendar = DB::table('CALENDAR')
             ->where('USER_ID', $userId)
             ->where('CAL_YEAR', $y)
             ->where('CAL_MONTH', $m)
             ->where('CAL_DATE', $d)
-            ->value('CALENDAR_ID');
+            ->first();
 
-        // TODAY_CODE 登録
+        if ($calendar) {
+            $calendarId = $calendar->CALENDAR_ID;
+        } else {
+            $calendarId = uniqid('CAL');
+            DB::table('CALENDAR')->insert([
+                'CALENDAR_ID' => $calendarId,
+                'USER_ID'     => $userId,
+                'CAL_YEAR'    => $y,
+                'CAL_MONTH'   => $m,
+                'CAL_DATE'    => $d,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+        }
+
+        // 紐付けテーブル (TODAY_CODE) を更新
+        // その日のコーデを新しい CODE_ID に差し替える
         DB::table('TODAY_CODE')->updateOrInsert(
             ['CALENDAR_ID' => $calendarId],
             ['CODE_ID' => $codeId]
         );
 
-        return redirect('/main/calendar');
+        return redirect('/main/calendar')->with('success', 'コーデを登録しました！');
     }
 
     // ▼ 今日のコーデ削除
