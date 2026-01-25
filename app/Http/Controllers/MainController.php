@@ -95,13 +95,10 @@ class MainController extends Controller
     }
 
     
-    // ▼ カレンダー用 API
+    // ▼ カレンダー用 API (修正版)
     public function getMonthlyStatus(Request $request)
     {
-        // 1. ログインチェック (これがないとバグで画面が真っ白になります)
         if (!Auth::check()) {
-            // ログインしていない場合でも、カレンダー枠を表示するために空のリストを送るか、
-            // 空配列を返してJS側で処理させます。今回は安全のため空配列を返します。
             return response()->json([]);
         }
 
@@ -109,48 +106,43 @@ class MainController extends Controller
         $month = $request->month;
         $userId = Auth::user()->USER_ID;
 
-        // 2. その月の日数（28〜31）を取得し、全ての日の「空データ」を作る
-        // 例: 2026年1月なら 31日分 の枠を用意する
+        // 1. その月の日数分、空枠を用意
         $daysInMonth = \Carbon\Carbon::create($year, $month)->daysInMonth;
         $result = [];
 
         for ($d = 1; $d <= $daysInMonth; $d++) {
-            // 日付文字列を作成 (例: 2026-01-01)
             $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $d);
-            
-            // デフォルト（未登録）状態でセット
             $result[$dateStr] = [
                 'isRegistered' => false,
                 'img' => null
             ];
         }
 
-        // 3. データベースから登録済みのデータを取得
+        // 2. データベースから画像パスを取得
+        // CALENDAR -> TODAY_CODE -> CODE と繋いで IMAGE_PATH を取得
         $rows = DB::table('CALENDAR')
-            ->leftJoin('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
-            ->leftJoin('CODE', 'TODAY_CODE.CODE_ID', '=', 'CODE.CODE_ID')
+            ->join('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
+            ->join('CODE', 'TODAY_CODE.CODE_ID', '=', 'CODE.CODE_ID')
             ->where('CALENDAR.USER_ID', $userId)
             ->where('CALENDAR.CAL_YEAR', $year)
             ->where('CALENDAR.CAL_MONTH', $month)
             ->select('CALENDAR.CAL_DATE', 'CODE.IMAGE_PATH')
             ->get();
 
-        // 4. 登録がある日だけ、画像データで上書きする
+        // 3. データがある日は上書き
         foreach ($rows as $row) {
-            if ($row->IMAGE_PATH) {
-                $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $row->CAL_DATE);
-                
-                // さっき作った枠の中にデータを入れる
-                $result[$dateStr] = [
-                    'isRegistered' => true,
-                    'img' => $row->IMAGE_PATH
-                ];
-            }
+            $dateStr = sprintf('%04d-%02d-%02d', $year, $month, $row->CAL_DATE);
+            
+            $result[$dateStr] = [
+                'isRegistered' => true,
+                // 画像パスがあればセット (nullならnullのまま)
+                'img' => $row->IMAGE_PATH 
+            ];
         }
 
-        // 全ての日付データが入った配列を返す
         return response()->json($result);
     }
+    
 
     // ▼ 今日のコーデ取得 API
     public function getCoordData(Request $request)
@@ -202,41 +194,35 @@ class MainController extends Controller
         $wearIds = $request->clothing_ids ?? [];
         [$y, $m, $d] = explode('-', $date);
 
-        // ★追加: タグとお気に入りデータの準備
+        // タグとお気に入りデータの準備
         $tagsInput = $request->input('tags');
-        // 日本語をそのまま保存できるように、JSONエンコード時にオプションを指定
         $tagsJson = $tagsInput ? json_encode(explode(',', $tagsInput), JSON_UNESCAPED_UNICODE) : null;
         $isFavorite = $request->has('is_favorite') ? 1 : 0;
 
         // 画像保存処理
         $imagePath = null;
-        // もし既存の画像があればそれを引き継ぎたいところですが、
-        // 今回はシンプルに「新規画像があれば保存」というロジックにします
         if ($request->hasFile('coord_image')) {
             $storedPath = $request->file('coord_image')->store('coord', 'public');
-            $imagePath = $storedPath; // storeメソッドはハッシュ名を返すのでそのまま使う
-        } else {
-            // 画像がアップされず、既存のコーデがある場合は、古い画像のパスを引き継ぐ処理が必要かも
-            // 一旦シンプルにするため、ここでは新規アップロードのみ扱います
+            $imagePath = $storedPath;
         }
 
-        // --- データ保存 (既存ロジック: 毎回新しいCODE IDを発行して付け替える方式) ---
-        // ※ 本格的には update も検討すべきですが、履歴管理の観点から「新規作成＆付け替え」でもOKです
+        // --- データ保存 ---
 
         $codeId = 'C' . strtoupper(substr(uniqid(), -7));
 
+        // 1. CODE テーブルへの保存（ここには created_at があるのでOK）
         DB::table('CODE')->insert([
             'CODE_ID'     => $codeId,
             'USER_ID'     => $userId,
             'CODE_NAME'   => $date . ' のコーデ',
-            'IMAGE_PATH'  => $imagePath, // 画像がない場合はNULLになります
-            'TAGS'        => $tagsJson,   // ★追加
-            'IS_FAVORITE' => $isFavorite, // ★追加
+            'IMAGE_PATH'  => $imagePath,
+            'TAGS'        => $tagsJson,
+            'IS_FAVORITE' => $isFavorite,
             'created_at'  => now(),
             'updated_at'  => now(),
         ]);
 
-        // 服との紐付け (WEAR_CODE)
+        // 2. WEAR_CODE テーブルへの保存
         foreach ($wearIds as $wearId) {
             DB::table('WEAR_CODE')->insert([
                 'CODE_ID' => $codeId,
@@ -244,8 +230,7 @@ class MainController extends Controller
             ]);
         }
 
-        // カレンダー登録 (CALENDAR)
-        // updateOrInsert でIDを取得したいため、一度検索してから処理
+        // 3. CALENDAR テーブルへの保存
         $calendar = DB::table('CALENDAR')
             ->where('USER_ID', $userId)
             ->where('CAL_YEAR', $y)
@@ -257,19 +242,20 @@ class MainController extends Controller
             $calendarId = $calendar->CALENDAR_ID;
         } else {
             $calendarId = uniqid('CAL');
+            
+            // ▼▼ 修正箇所: created_at, updated_at を削除しました ▼▼
             DB::table('CALENDAR')->insert([
                 'CALENDAR_ID' => $calendarId,
                 'USER_ID'     => $userId,
                 'CAL_YEAR'    => $y,
                 'CAL_MONTH'   => $m,
                 'CAL_DATE'    => $d,
-                'created_at'  => now(),
-                'updated_at'  => now(),
+                // created_at と updated_at は削除
             ]);
+            // ▲▲ 修正箇所終わり ▲▲
         }
 
-        // 紐付けテーブル (TODAY_CODE) を更新
-        // その日のコーデを新しい CODE_ID に差し替える
+        // 4. TODAY_CODE テーブルを更新
         DB::table('TODAY_CODE')->updateOrInsert(
             ['CALENDAR_ID' => $calendarId],
             ['CODE_ID' => $codeId]
