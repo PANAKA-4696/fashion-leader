@@ -6,6 +6,7 @@
     <title>{{ $date }} のコーデ詳細</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <style>
+        /* 既存のスタイル */
         .coord-main-img {
             width: 100%;
             max-width: 400px;
@@ -25,6 +26,16 @@
             border-radius: 8px;
             margin-bottom: 20px;
             border: 1px dashed #ccc;
+        }
+        /* 未登録時のスタイル */
+        .not-registered-box {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 30px;
         }
         .used-item-list {
             display: flex;
@@ -53,40 +64,55 @@
 
     <div class="container">
         
-        @if(isset($code) && $code->IMAGE_PATH)
-            <img src="{{ asset('storage/' . $code->IMAGE_PATH) }}" alt="今日のコーデ" class="coord-main-img">
-        @else
-            <div class="no-image-box">
-                <p>全体画像がありません。</p>
-            </div>
-        @endif
+        @if(isset($code))
+            @if($code->IMAGE_PATH)
+                <img src="{{ asset('storage/' . $code->IMAGE_PATH) }}" alt="今日のコーデ" class="coord-main-img">
+            @else
+                <div class="no-image-box">
+                    <p>全体画像がありません。</p>
+                </div>
+            @endif
 
-        @if(count($wears) > 0)
-            <h3>着用アイテム</h3>
-            <div class="used-item-list">
-                @foreach($wears as $wear)
-                    <div class="used-item">
-                        @if($wear->IMAGE_PATH)
-                            <img src="{{ asset('storage/' . $wear->IMAGE_PATH) }}" alt="{{ $wear->CATEGORY }}">
-                        @else
-                            <img src="{{ asset('images/no_image.png') }}" alt="No Image">
-                        @endif
-                        <p style="font-size: 10px; margin:0;">{{ $wear->ITEM_NAME }}</p>
-                    </div>
-                @endforeach
-            </div>
-        @endif
+            @if(count($wears) > 0)
+                <h3>着用アイテム</h3>
+                <div class="used-item-list">
+                    @foreach($wears as $wear)
+                        <div class="used-item">
+                            @if($wear->IMAGE_PATH)
+                                <img src="{{ asset('storage/' . $wear->IMAGE_PATH) }}" alt="{{ $wear->CATEGORY }}">
+                            @else
+                                <img src="{{ asset('images/no_image.png') }}" alt="No Image">
+                            @endif
+                            <p style="font-size: 10px; margin:0;">{{ $wear->ITEM_NAME }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
 
-        <hr>
-
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="/main/closet_edit?date={{ $date }}" class="button primary">
-                コーデを編集・登録する
-            </a>
+            <hr>
             
-            <a href="/main/calendar" class="button" style="margin-left: 10px;">キャンセル</a>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="/main/closet_edit?date={{ $date }}" class="button primary">
+                    コーデを編集・登録する
+                </a>
+                <a href="/main/calendar" class="button" style="margin-left: 10px;">キャンセル</a>
+            </div>
+
+        @else
+            <div class="not-registered-box">
+                <h2>まだコーデが登録されていません</h2>
+                <p>この日のコーディネートを登録して、<br>記録を残しましょう！</p>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="/main/closet_edit?date={{ $date }}" class="button primary" style="font-size: 1.2em; padding: 15px 30px;">
+                    新しくコーデを登録する
+                </a>
+                <br><br>
+                <a href="/main/calendar" class="button">キャンセル</a>
+            </div>
+
+        @endif
         </div>
-        
-    </div>
 </body>
 </html>
