@@ -1,140 +1,94 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="utf-8" />
-    <title>今日のコーデ確認</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $date }} のコーデ詳細</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
-
     <style>
-        .button-group {
+        /* 全体画像のスタイル */
+        .coord-main-img {
+            width: 100%;
+            max-width: 400px; /* 巨大になりすぎないように制限 */
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* 画像がない場合のメッセージボックス */
+        .no-image-box {
+            background-color: #f0f0f0;
+            color: #666;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px dashed #ccc;
+        }
+
+        /* 使った服リストの簡易スタイル */
+        .used-item-list {
             display: flex;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .btn-action {
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-size: 16px;
-            height: 44px;
-            display: inline-flex;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
             justify-content: center;
-            cursor: pointer;
-            border: none;
-            text-decoration: none;
-            color: white;
-            background-color: #4CAF50;
         }
-
-        .btn-delete {
-            background-color: #E53935;
+        .used-item {
+            width: 80px;
+            text-align: center;
+        }
+        .used-item img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border: 1px solid #eee;
+            border-radius: 4px;
         }
     </style>
 </head>
-
 <body>
     <div class="header-nav">
-        <h1>今日のコーデ確認</h1>
-        <a href="/main/calendar">カレンダーへ</a>
+        <h1>{{ $date }} のコーデ</h1>
+        <a href="/main/calendar" class="back-btn">カレンダーへ戻る</a>
     </div>
 
     <div class="container">
-        <div class="date-display-container">
-            <h2 id="view-date" class="view-date-display">----年--月--日のコーデ</h2>
-        </div>
-
-        <p class="item-line">
-            <span class="label" style="font-weight: bold; color: #c62828;">全体像:</span>
-            <span class="img-box">
-                <img id="overall_photo" class="clothing-img" src="" alt="コーデ全体像">
-            </span>
-            <p id="overall_none" style="color:#999; display:none;">全体像は未登録です</p>
-        </p>
+        
+        @if(isset($code) && $code->IMAGE_PATH)
+            <img src="{{ asset('storage/' . $code->IMAGE_PATH) }}" alt="今日のコーデ" class="coord-main-img">
+        @else
+            <div class="no-image-box">
+                <p>全体画像がありません。</p>
+            </div>
+        @endif
+        @if(count($wears) > 0)
+            <h3>着用アイテム</h3>
+            <div class="used-item-list">
+                @foreach($wears as $wear)
+                    <div class="used-item">
+                        @if($wear->IMAGE_PATH)
+                            <img src="{{ asset('storage/' . $wear->IMAGE_PATH) }}" alt="{{ $wear->CATEGORY }}">
+                        @else
+                            <img src="{{ asset('images/no_image.png') }}" alt="No Image">
+                        @endif
+                        <p style="font-size: 10px; margin:0;">{{ $wear->ITEM_NAME }}</p>
+                    </div>
+                @endforeach
+            </div>
+        @endif
 
         <hr>
 
-        <div id="items-list">
-            <p class="item-line"><span class="label">シャツ:</span> <span class="img-box"><img id="item-shirt" class="clothing-img" src=""></span></p>
-            <p class="item-line"><span class="label">パンツ:</span> <span class="img-box"><img id="item-pants" class="clothing-img" src=""></span></p>
-            <p class="item-line"><span class="label">シューズ:</span> <span class="img-box"><img id="item-shoes" class="clothing-img" src=""></span></p>
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="/main/closet_edit?date={{ $date }}" class="button primary">
+                コーデを編集・登録する
+            </a>
         </div>
-
-        <div class="button-group">
-            <button id="editBtn" class="btn-action">このコーデを変更する</button>
-            <button id="deleteBtn" class="btn-action btn-delete">このコーデを削除する</button>
-        </div>
+        
     </div>
-
-    <script>
-        const DM = {
-            async getCoordData(date) {
-                const res = await fetch(`/api/coord?date=${date}`);
-                return await res.json();
-            },
-
-            async deleteCoord(date) {
-                await fetch('/main/deleteCoord', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ date })
-                });
-
-                alert("削除が完了しました");
-                window.location.href = "/main/calendar";
-            }
-        };
-
-        async function initDisplay() {
-            const params = new URLSearchParams(window.location.search);
-            const dateStr = params.get('date');
-
-            if (!dateStr) {
-                alert("日付情報がありません");
-                window.location.href = "/main/calendar";
-                return;
-            }
-
-            document.getElementById("view-date").innerText = `${dateStr} のコーデ`;
-
-            const data = await DM.getCoordData(dateStr);
-
-            const overallImg = document.getElementById("overall_photo");
-            const overallNone = document.getElementById("overall_none");
-
-            if (!data) {
-                overallImg.style.display = "none";
-                overallNone.style.display = "block";
-            } else if (!data.overall) {
-                overallImg.style.display = "none";
-                overallNone.style.display = "block";
-            } else {
-                overallImg.style.display = "block";
-                overallNone.style.display = "none";
-                overallImg.src = data.overall;
-            }
-
-            document.getElementById("item-shirt").src = data?.shirt ?? "";
-            document.getElementById("item-pants").src = data?.pants ?? "";
-            document.getElementById("item-shoes").src = data?.shoes ?? "";
-
-            document.getElementById("editBtn").onclick = () => {
-                window.location.href = `/main/closet_edit?date=${dateStr}`;
-            };
-
-            document.getElementById("deleteBtn").onclick = (e) => {
-                e.preventDefault();
-                if (confirm("この日のコーデを削除してもよろしいですか？")) {
-                    DM.deleteCoord(dateStr);
-                }
-            };
-        }
-
-        document.addEventListener("DOMContentLoaded", initDisplay);
-    </script>
 </body>
 </html>
