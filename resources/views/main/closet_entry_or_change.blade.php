@@ -235,6 +235,14 @@
                 span.textContent = '今日のコーデをお気に入り登録';
             }
         });
+
+        // ▼▼ 追加: 服検索ボックスでのEnterキーによる誤送信（保存）を防止 ▼▼
+        document.getElementById('wear_search').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // 何もしない（送信を止める）
+                return false;
+            }
+        });
     </script>
 </body>
 </html>
