@@ -8,6 +8,9 @@ use App\Http\Controllers\ClosetController;
 use App\Http\Controllers\ClothingController;
 use App\Http\Controllers\AuthController;
 
+
+// --- モギ(リーダタナカ)担当場所（authの中やトップページ） ---
+
 // ----------------------------------------------------------------
 // ▼ 1. 誰でもアクセスできるエリア（ログイン・登録・トップ）
 // ----------------------------------------------------------------
@@ -80,7 +83,7 @@ Route::middleware(['auth'])->group(function () {
     // (重複していたルート定義は削除しました)
 
 
-    // --- フクシマ担当場所（クローゼット管理） ---
+    // --- フクシマ(リーダータナカ)担当場所（クローゼット管理） ---
 
     // クローゼット一覧
     Route::get('/closet/main', [ClosetController::class, 'index'])->name('closet.main');
@@ -102,18 +105,31 @@ Route::middleware(['auth'])->group(function () {
 
     // --- リーダー田中担当場所（コーデ管理） ---
 
-    // コーデ管理
-    Route::get('/coord/add', [CoordinationController::class, 'create'])->name('coord.add');
-    Route::get('/coord/save', [CoordinationController::class, 'createMaster']);
-    
-    // コーデマスター保存・変更
-    Route::post('/coord/master-store', [CoordinationController::class, 'storeMaster'])->name('coord.master.store');
-    Route::get('/coord/edit', [CoordinationController::class, 'editMaster']);
-    
+    // 2. コーデマスター保存（新規登録画面）
+    Route::get('/coord/save', [CoordinationController::class, 'createMaster'])->name('coord.save');
+    Route::post('/coord/store', [CoordinationController::class, 'storeMaster'])->name('coord.store'); // 保存処理
+
+    // 4. コーデ変更（詳細編集画面 & 更新処理）
+    Route::get('/coord/change/{id}', [CoordinationController::class, 'edit'])->name('coord.change');
+    Route::put('/coord/update/{id}', [CoordinationController::class, 'update'])->name('coord.update');
+
     // クローゼット内でのコーデ追加
     Route::get('/closet/{closet_id}/add-code', [CoordinationController::class, 'create'])->name('closet.coord.add');
     Route::post('/closet/code-store', [CoordinationController::class, 'store'])->name('closet.code.store');
 
+    // --- オオタ(リーダータナカ)担当場所（コーデ管理） ---
+
+    // 1. コーデマスター管理（メニュー）
+    Route::get('/coord/manage', [CoordinationController::class, 'index'])->name('coord.manage');
+
+    // 3. コーデ変更（一覧から選択する画面）
+    Route::get('/coord/choice', [CoordinationController::class, 'choice'])->name('coord.choice');
+
+    // 5. コーデ削除（一覧から選択する画面 & 削除処理）
+    Route::get('/coord/delete', [CoordinationController::class, 'deleteSelect'])->name('coord.delete');
+    Route::delete('/coord/destroy/{id}', [CoordinationController::class, 'destroy'])->name('coord.destroy');
+
+    
     // ログアウト
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
