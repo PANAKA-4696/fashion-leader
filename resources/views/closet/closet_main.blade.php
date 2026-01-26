@@ -52,7 +52,7 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <div></div>
             <a href="{{ route('closet.edit', ['id' => $closet->CLOSET_ID]) }}" class="button">
-                名前を変更
+                クローゼットを編集
             </a>
         </div>
         
