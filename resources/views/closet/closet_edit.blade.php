@@ -7,63 +7,36 @@
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     
     <style>
-        /* --- ここから追加：ポップアップ用のスタイル --- */
+        /* --- ポップアップ用のスタイル --- */
         .flash-message {
-            position: fixed;
-            top: 20px;       /* 画面の上から20pxの位置 */
-            left: 50%;       /* 左右中央 */
-            transform: translateX(-50%);
-            background-color: #4CAF50; /* 緑色 */
-            color: white;
-            padding: 15px 30px;
-            border-radius: 5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 9999;   /* 最前面に表示 */
-            opacity: 0;      /* 最初は透明 */
-            visibility: hidden;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: #4CAF50; color: white; padding: 15px 30px;
+            border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 9999; opacity: 0; visibility: hidden;
             transition: opacity 0.5s ease-in-out, visibility 0.5s;
         }
-        .flash-message.show {
-            visibility: visible;
-            opacity: 1;      /* ふわっと表示 */
-        }
-        /* --- ここまで追加 --- */
+        .flash-message.show { visibility: visible; opacity: 1; }
 
-        /* --- 以下は既存のタグ用スタイル --- */
-        .tag-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 10px;
-            min-height: 30px;
-        }
+        /* --- タグ用スタイル --- */
+        .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; min-height: 30px; }
         .tag-chip {
-            background-color: #e0e0e0;
-            color: #333;
-            padding: 5px 12px;
-            border-radius: 16px;
-            display: inline-flex;
-            align-items: center;
-            font-size: 0.9em;
+            background-color: #e0e0e0; color: #333; padding: 5px 12px;
+            border-radius: 16px; display: inline-flex; align-items: center; font-size: 0.9em;
         }
-        .tag-remove {
-            margin-left: 8px;
-            cursor: pointer;
-            color: #666;
-            font-weight: bold;
-            font-size: 1.1em;
-            line-height: 1;
+        .tag-remove { margin-left: 8px; cursor: pointer; color: #666; font-weight: bold; font-size: 1.1em; line-height: 1; }
+        .tag-remove:hover { color: #ff4d4d; }
+        .tag-input-group { display: flex; gap: 5px; }
+        #tag-input { flex: 1; }
+
+        /* --- お気に入りボタン用スタイル --- */
+        .favorite-toggle-btn {
+            display: inline-flex; align-items: center; cursor: pointer; padding: 8px 12px;
+            border: 1px solid #ccc; border-radius: 4px; background: #fff; transition: all 0.2s; user-select: none;
         }
-        .tag-remove:hover {
-            color: #ff4d4d;
-        }
-        .tag-input-group {
-            display: flex;
-            gap: 5px;
-        }
-        #tag-input {
-            flex: 1;
-        }
+        .favorite-toggle-btn input { display: none; }
+        .favorite-toggle-btn .fav-icon { margin-right: 5px; color: #ccc; font-size: 18px; }
+        .favorite-toggle-btn.favorited { border-color: #ff4d4d; background: #fff5f5; color: #ff4d4d; }
+        .favorite-toggle-btn.favorited .fav-icon { color: #ff4d4d; }
     </style>
 </head>
 <body>
@@ -114,27 +87,34 @@
                 <a href="{{ route('closet.view', ['id' => $closet->CLOSET_ID]) }}" class="button">キャンセル</a>
             </div>
         </form>
-    </div>
+
+        <hr style="margin: 40px 0 20px 0; border: 0; border-top: 1px solid #eee;">
+
+        <div style="text-align: right;">
+            <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+                ※このクローゼットを削除しても、中身の服やコーデのデータ自体は消えません。
+            </p>
+            
+            <form action="{{ route('closet.destroy', ['id' => $closet->CLOSET_ID]) }}" method="POST" onsubmit="return confirm('本当にこのクローゼットを削除しますか？\n\n削除すると一覧画面に戻ります。');">
+                @csrf
+                <button type="submit" class="button" style="background-color: #ff4d4d; color: white; border: none;">
+                    このクローゼットを削除する
+                </button>
+            </form>
+        </div>
+        </div>
 
     <script>
-        // 画面が読み込まれたら実行
+        // --- 1. ポップアップ制御 ---
         document.addEventListener('DOMContentLoaded', function() {
             const popup = document.getElementById('flash-popup');
             if (popup) {
-                // 1. 表示する
-                setTimeout(() => {
-                    popup.classList.add('show');
-                }, 100);
-
-                // 2. 3秒後に消える
-                setTimeout(() => {
-                    popup.classList.remove('show');
-                }, 3000);
+                setTimeout(() => { popup.classList.add('show'); }, 100);
+                setTimeout(() => { popup.classList.remove('show'); }, 3000);
             }
         });
 
-
-        // --- 2. お気に入りボタンの制御 ---
+        // --- 2. お気に入りボタン制御 ---
         document.getElementById('favorite-toggle').addEventListener('change', function() {
             const btn = this.closest('.favorite-toggle-btn');
             if (this.checked) {
@@ -146,61 +126,47 @@
             }
         });
 
-
-        // --- 3. タグ機能の制御 ---
+        // --- 3. タグ機能制御 ---
         const tagInput = document.getElementById('tag-input');
         const addTagBtn = document.getElementById('add-tag-btn');
         const tagList = document.getElementById('tag-list');
         const hiddenTags = document.getElementById('hidden-tags');
 
-        // 初期値（カンマ区切り文字列）を配列に変換。空文字は除去。
         let tags = hiddenTags.value ? hiddenTags.value.split(',').map(t => t.trim()).filter(t => t !== "") : [];
 
-        // 画面と隠しフィールドを更新する関数
         function renderTags() {
-            tagList.innerHTML = ''; // 一旦リセット
-            
+            tagList.innerHTML = '';
             tags.forEach((tag, index) => {
                 const chip = document.createElement('span');
                 chip.className = 'tag-chip';
-                // タグ名 + 削除ボタン(×)
                 chip.innerHTML = `${tag} <span class="tag-remove" onclick="removeTag(${index})">×</span>`;
                 tagList.appendChild(chip);
             });
-            
-            // 配列をカンマ区切り文字列に戻して隠しフィールドへセット
             hiddenTags.value = tags.join(',');
         }
 
-        // タグを追加する関数
         function addTag() {
             const value = tagInput.value.trim();
-            // 空でなく、かつ既に同じタグがない場合のみ追加
             if (value && !tags.includes(value)) {
                 tags.push(value);
                 renderTags();
-                tagInput.value = ''; // 入力欄をクリア
+                tagInput.value = '';
             }
         }
 
-        // タグを削除する関数（HTML側から呼ぶため window に紐付け）
         window.removeTag = function(index) {
-            tags.splice(index, 1); // 指定した位置から1つ削除
+            tags.splice(index, 1);
             renderTags();
         };
 
-        // エンターキーでタグ追加（フォーム送信を防ぐ）
         tagInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault(); // Enterキーによるsubmitを防止
+                e.preventDefault();
                 addTag();
             }
         });
 
-        // 「追加」ボタンクリックでタグ追加
         addTagBtn.addEventListener('click', addTag);
-
-        // 初回表示（DBにあるタグを表示）
         renderTags();
     </script>
 </body>
