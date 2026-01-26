@@ -93,7 +93,7 @@
             <a href="/main/closet_clothes" class="nav-item">
                 <span class="nav-icon">👕</span><span>クローゼット管理</span>
             </a>
-            <a href="/coord/add" class="nav-item">
+            <a href="/coord/manage" class="nav-item">
                 <span class="nav-icon">👗</span><span>コーデ管理</span>
             </a>
             <a href="/clothing/wear-screen" class="nav-item">
