@@ -100,18 +100,37 @@ class CoordinationController extends Controller
     {
         $userId = Auth::user()->USER_ID;
 
-        // カレンダーで使われている一時的なコーデIDを除外
+        // 1. カレンダー(TODAY_CODE)に含まれるIDを除外リストとして取得
         $calendarCodeIds = DB::table('TODAY_CODE')->pluck('CODE_ID')->toArray();
 
+        // 2. マスターコーデ一覧を取得
         $coords = DB::table('CODE')
             ->where('USER_ID', $userId)
             ->whereNotIn('CODE_ID', $calendarCodeIds)
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // 3. 各コーデに紐付いている「服データ」を一括取得
+        // (N+1問題を避けるため、ループ内でクエリを投げずに一括で取ります)
+        $codeIds = $coords->pluck('CODE_ID'); // 表示するコーデのIDリスト
+
+        $wearsGrouped = DB::table('WEAR_CODE')
+            ->join('WEAR', 'WEAR_CODE.WEAR_ID', '=', 'WEAR.WEAR_ID')
+            ->whereIn('WEAR_CODE.CODE_ID', $codeIds)
+            ->select('WEAR_CODE.CODE_ID', 'WEAR.WEAR_ID', 'WEAR.ITEM_NAME', 'WEAR.CATEGORY', 'WEAR.IMAGE_PATH')
+            ->get()
+            ->groupBy('CODE_ID'); // CODE_IDごとにまとめる
+
+        // 4. コーデデータに服データをくっつける
+        foreach ($coords as $coord) {
+            // そのコーデIDに対応する服リストがあればセット、なければ空のコレクション
+            $coord->wears = $wearsGrouped->get($coord->CODE_ID, collect([]));
+        }
+
         return view('coord.coord_choice', ['coords' => $coords]);
     }
 
+    
     // ==========================================
     // 4. 詳細編集画面 (coord_change)
     // ==========================================
