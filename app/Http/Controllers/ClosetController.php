@@ -3,219 +3,159 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Closet;
-use App\Models\Code;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str; // ID生成用
-use Illuminate\Support\Facades\Auth; // ★追加
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class ClosetController extends Controller
 {
-    /**
-     * クローゼット一覧 (closet_main)
-     */
+    // ==========================================
+    // 1. クローゼット一覧 (index)
+    // ==========================================
     public function index()
     {
-        $userId = Auth::user()->USER_ID; // ★変更
+        $userId = Auth::user()->USER_ID;
+        $closets = DB::table('CLOSET')->where('USER_ID', $userId)->get();
 
-        // ユーザーのクローゼット一覧を取得
-        $closets = Closet::where('USER_ID', $userId)->get();
-
-        // 各クローゼットごとに「タグ」と「お気に入り」の情報をくっつける
-        foreach ($closets as $closet) {
-            
-            // ★追加：タグを取得して文字列にする（例: "春服, デート"）
-            $tags = DB::table('TAG')
-                ->where('CLOSET_ID', $closet->CLOSET_ID)
-                ->pluck('TAG_NAME')
-                ->toArray();
-            
-            // 配列をカンマ区切りの文字列にして、closetオブジェクトに一時的に保存
-            // タグがなければ「タグなし」や空文字にする
-            $closet->tag_string = !empty($tags) ? implode(', ', $tags) : 'タグなし';
-
-
-            // 既存：お気に入り判定
-            $closet->is_favorite = DB::table('FAVORITE')
-                ->where('USER_ID', $userId)
-                ->where('CLOSET_ID', $closet->CLOSET_ID)
-                ->exists();
-        }
-
-        return view('closet.closet_main', compact('closets'));
+        return view('closet.closet_main', ['closets' => $closets]);
     }
 
-    /**
-     * クローゼット詳細 (closet_view)
-     */
+    // ==========================================
+    // 2. クローゼット詳細 (view)
+    // ==========================================
     public function show($id)
     {
-        $userId = Auth::user()->USER_ID; // ★変更
+        $userId = Auth::user()->USER_ID;
 
-        // 1. クローゼット本体を取得
-        $closet = Closet::findOrFail($id);
-
-        // 2. ★追加：このクローゼットに紐づくタグを取得し、カンマ区切りの文字列にする
-        // (例: ['夏服', '仕事用'] → "夏服, 仕事用")
-        $tags = DB::table('TAG')
+        // A. クローゼット情報の取得
+        $closet = DB::table('CLOSET')
             ->where('CLOSET_ID', $id)
-            ->pluck('TAG_NAME')
-            ->toArray();
-        $closet_tags = implode(', ', $tags);
-
-        // 3. このクローゼットに紐づく「コーデ」と、その中の「服」と「タグ」をまとめて取得
-        $codes = $closet->codes()->with(['wears', 'tags'])->get();
-
-        // 4. クローゼット自体がお気に入りか判定
-        $isFavorite = DB::table('FAVORITE')
             ->where('USER_ID', $userId)
-            ->where('CLOSET_ID', $id)
-            ->exists();
+            ->first();
 
-        // ★ compact に 'closet_tags' を追加して画面に渡す
-        return view('closet.closet_view', compact('closet', 'codes', 'isFavorite', 'closet_tags'));
-    }
+        if (!$closet) abort(404);
 
-    /**
-     * 編集画面の表示
-     */
-    public function edit($id)
-    {
-        $closet = Closet::findOrFail($id);
+        // B. クローゼット内のコーデ一覧を取得 (CLOSET_CODE -> CODE)
+        $codes = DB::table('CLOSET_CODE')
+            ->join('CODE', 'CLOSET_CODE.CODE_ID', '=', 'CODE.CODE_ID')
+            ->where('CLOSET_CODE.CLOSET_ID', $id)
+            ->select('CODE.*')
+            ->get();
+
+        // C. 各コーデに紐付く服データを取得してセット
+        // (N+1対策: コーデIDリストを作って一括取得)
+        $codeIds = $codes->pluck('CODE_ID');
         
-        // 現在のタグを取得して、カンマ区切りの文字列にする
-        $tags = DB::table('TAG')->where('CLOSET_ID', $id)->pluck('TAG_NAME')->toArray();
-        $currentTagsString = implode(', ', $tags);
+        $wearsGrouped = DB::table('WEAR_CODE')
+            ->join('WEAR', 'WEAR_CODE.WEAR_ID', '=', 'WEAR.WEAR_ID')
+            ->whereIn('WEAR_CODE.CODE_ID', $codeIds)
+            ->select('WEAR_CODE.CODE_ID', 'WEAR.*')
+            ->get()
+            ->groupBy('CODE_ID');
 
-        $isFavorite = DB::table('FAVORITE')
-                        ->where('USER_ID', Auth::user()->USER_ID) // ★変更
-                        ->where('CLOSET_ID', $id)
-                        ->exists();
-
-        return view('closet.closet_edit', compact('closet', 'isFavorite', 'currentTagsString'));
-    }
-
-    /**
-     * 編集内容の保存 (No.9)
-     */
-    public function update(Request $request, $id)
-    {
-        $userId = Auth::user()->USER_ID; // ★変更
-
-        DB::transaction(function () use ($request, $id, $userId) {
-            // 1. クローゼット本体の更新
-            $closet = Closet::findOrFail($id);
-            $closet->update([
-                'CLOSET_NAME' => $request->new_closet_name,
-                // 設計図通り、CLOSETにはtimestampsがあるのでここは自動で動きます
-            ]);
-
-            // 2. タグの更新（TAGテーブルには timestamps がないので含めない）
-            DB::table('TAG')->where('CLOSET_ID', $id)->delete();
-
-            if ($request->filled('new_tag')) {
-                $tags = explode(',', $request->new_tag);
-                foreach ($tags as $tagName) {
-                    DB::table('TAG')->insert([
-                        'TAG_ID'    => 'TG' . date('ymdHis') . Str::random(2),
-                        'TAG_NAME'  => trim($tagName),
-                        'USER_ID'   => $userId,
-                        'CLOSET_ID' => $id,
-                        // created_at は入れない
-                    ]);
+        // データ結合
+        foreach ($codes as $code) {
+            // 服データ
+            $code->wears = $wearsGrouped->get($code->CODE_ID, collect([]));
+            
+            // タグデータ (JSON文字列を配列に戻す)
+            // ※タグはCODEテーブルのTAGSカラム(JSON)に入っている想定です
+            $tagsArray = [];
+            if ($code->TAGS) {
+                $decoded = json_decode($code->TAGS, true);
+                if (is_array($decoded)) {
+                    $tagsArray = $decoded;
                 }
             }
+            $code->tags_array = $tagsArray;
+        }
 
-            // 3. お気に入り状態の更新（FAVORITEテーブルにも timestamps がないので修正）
-            if ($request->has('is_favorite')) {
-                // 第2引数の更新内容を空 [] にするか、USER_IDなどを指定します
-                DB::table('FAVORITE')->updateOrInsert(
-                    ['USER_ID' => $userId, 'CLOSET_ID' => $id],
-                    ['USER_ID' => $userId] // 更新する値がないので自分自身を指定（エラー回避）
-                );
-            } else {
-                DB::table('FAVORITE')
-                    ->where('USER_ID', $userId)
-                    ->where('CLOSET_ID', $id)
-                    ->delete();
-            }
-        });
+        // クローゼット自体のタグ（もしあれば）
+        // 現状のDB設計だとクローゼット自体にはタグがないかもしれませんが、
+        // 念のため view 側でエラーにならないよう空文字などを渡します
+        $closet_tags = ''; 
 
-        return redirect()->route('closet.view', ['id' => $id])->with('success', 'クローゼットを更新しました');
+        return view('closet.closet_view', [
+            'closet' => $closet,
+            'codes'  => $codes,
+            'closet_tags' => $closet_tags
+        ]);
     }
 
-    /**
-     * クローゼットからコーデを削除（紐付け解除）
-     */
-    public function removeCoord(Request $request)
-    {
-        // 送られてきたコーデIDを取得
-        $codeId = $request->input('code_id');
-        
-        // 中間テーブル「CLOSET_CODE」から、そのコーデの紐付けを削除
-        // 注意：コーデ（CODEマスタ）自体は消さず、紐付けだけを消します
-        DB::table('CLOSET_CODE')
-            ->where('CODE_ID', $codeId)
-            ->delete();
-
-        // 元の画面（詳細画面）に戻る
-        return back()->with('success', 'コーディネートをクローゼットから外しました');
-    }
-
-    /**
-     * 追加画面の表示
-     */
+    // ==========================================
+    // 3. クローゼット追加 (add)
+    // ==========================================
     public function create()
     {
         return view('closet.closet_add');
     }
 
-    /**
-     * 保存処理 (closet_add からの送信)
-     */
     public function store(Request $request)
     {
-        // 1. 入力チェック
-        $request->validate([
-            'closet_name' => 'required|max:255',
+        $userId = Auth::user()->USER_ID;
+        $request->validate(['closet_name' => 'required']);
+
+        $closetId = 'CL' . date('ymdHis') . Str::random(2);
+
+        DB::table('CLOSET')->insert([
+            'CLOSET_ID'   => $closetId,
+            'USER_ID'     => $userId,
+            'CLOSET_NAME' => $request->closet_name,
+            'created_at'  => now(),
+            'updated_at'  => now(),
         ]);
 
-        $userId = Auth::user()->USER_ID; // ★変更
+        return redirect()->route('closet.main')->with('success', 'クローゼットを作成しました！');
+    }
 
-        // トランザクションでまとめて保存（失敗したらロールバック）
-        DB::transaction(function () use ($request, $userId) {
-            
-            // 2. IDの生成
-            $newId = 'CL' . date('ymdHis') . Str::random(2);
+    // ==========================================
+    // 4. クローゼット編集 (edit)
+    // ==========================================
+    public function edit($id)
+    {
+        $userId = Auth::user()->USER_ID;
+        $closet = DB::table('CLOSET')->where('CLOSET_ID', $id)->where('USER_ID', $userId)->first();
+        if (!$closet) abort(404);
 
-            // 3. CLOSETテーブルへ保存
-            Closet::create([
-                'CLOSET_ID'   => $newId,
+        return view('closet.closet_edit', ['closet' => $closet]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $userId = Auth::user()->USER_ID;
+        $request->validate(['closet_name' => 'required']);
+
+        DB::table('CLOSET')
+            ->where('CLOSET_ID', $id)
+            ->where('USER_ID', $userId)
+            ->update([
                 'CLOSET_NAME' => $request->closet_name,
-                'CLOSET_INFO' => null, // 説明欄はなくなったのでnull
-                'USER_ID'     => $userId,
+                'updated_at'  => now(),
             ]);
 
-            // 4. TAGテーブルへ保存（ここを追加）
-            if ($request->filled('new_tag')) {
-                $tags = explode(',', $request->new_tag);
-                
-                foreach ($tags as $index => $tagName) {
-                    // ループ処理が高速だとIDが重複する恐れがあるため、ランダム文字数を少し増やすか工夫
-                    // 'TG'(2) + 日時(12) + ランダム(2) = 16文字
-                    $tagId = 'TG' . date('ymdHis') . Str::random(2);
-                    
-                    DB::table('TAG')->insert([
-                        'TAG_ID'    => $tagId,
-                        'TAG_NAME'  => trim($tagName),
-                        'USER_ID'   => $userId,
-                        'CLOSET_ID' => $newId, // 作成したばかりのクローゼットIDと紐付け
-                    ]);
-                }
-            }
-        });
+        return redirect()->route('closet.view', ['id' => $id])->with('success', 'クローゼット名を変更しました！');
+    }
 
-        // 4. 一覧画面へ戻る
-        return redirect()->route('closet.main')->with('success', 'クローゼットを作成しました！');
+    // ==========================================
+    // 5. コーデ削除 (紐付け解除)
+    // ==========================================
+    public function removeCoord(Request $request)
+    {
+        // どのクローゼットから消すかは、URLパラメータかHidden値で受け取る必要がありますが、
+        // ひとまず CODE_ID だけで紐付けテーブルから削除します
+        // (厳密には CLOSET_ID も条件に入れたほうが安全です)
+        
+        $codeId = $request->input('code_id');
+        
+        // 紐付け解除
+        DB::table('CLOSET_CODE')->where('CODE_ID', $codeId)->delete();
+        
+        // ※必要であれば、紐付けがなくなった CODE 本体を消す処理も入れられますが、
+        // クローゼットの場合は「紐付けだけ外す」が一般的かもしれません。
+        // 今回は前例(カレンダー)に合わせて、本体も消すなら以下の行を追加します：
+        DB::table('WEAR_CODE')->where('CODE_ID', $codeId)->delete();
+        DB::table('CODE')->where('CODE_ID', $codeId)->delete();
+
+        return redirect()->back()->with('success', 'コーデを削除しました。');
     }
 }

@@ -90,7 +90,7 @@
 
     <div class="container">
         <div class="nav-grid">
-            <a href="/main/closet_clothes" class="nav-item">
+            <a href="{{ route('closet.main') }}" class="nav-item">
                 <span class="nav-icon">👕</span><span>クローゼット管理</span>
             </a>
             <a href="/coord/manage" class="nav-item">
