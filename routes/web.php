@@ -54,9 +54,6 @@ Route::middleware(['auth'])->group(function () {
     // 今日のコーデ編集・登録画面
     Route::get('/main/closet_edit', [MainController::class, 'closet_edit'])->name('closet.edit');
     Route::post('/main/closet_edit', [MainController::class, 'saveCoord']); // 保存処理
-    
-    // 今日のコーデ削除
-    Route::post('/main/deleteCoord', [MainController::class, 'deleteCoord']);
 
 
     // --- 田中担当場所（服マスター管理） ---
@@ -73,9 +70,9 @@ Route::middleware(['auth'])->group(function () {
     // 服の保存処理
     Route::post('/clothing/store', [ClothingController::class, 'store']);
     
-    // ▼▼ 修正箇所: URLを /main/coord_delete に変更 ▼▼
-    // 今日のコーデ削除
-    Route::post('/main/coord_delete', [MainController::class, 'deleteCoord']);
+    // 服の削除処理
+    Route::delete('/clothing/{id}', [ClothingController::class, 'destroy']);
+    Route::get('/clothing/wear-delete', [MainController::class, 'wear_delete']); // 削除選択画面
     
     // 服の編集画面・更新処理
     Route::get('/clothing/wear-item-change/{id}', [MainController::class, 'wear_item_change']);
@@ -101,6 +98,10 @@ Route::middleware(['auth'])->group(function () {
     
     // コーデ削除（紐付け解除）
     Route::post('/closet/coord/delete', [ClosetController::class, 'removeCoord'])->name('closet.coord.delete');
+
+    // ▼▼ 修正箇所: URLを /main/coord_delete に変更 ▼▼
+    // 今日のコーデ削除
+    Route::post('/main/coord_delete', [MainController::class, 'deleteCoord']);
 
 
     // --- リーダー田中担当場所（コーデ管理） ---
