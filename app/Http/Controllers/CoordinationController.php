@@ -16,7 +16,7 @@ class CoordinationController extends Controller
     // ------------------------------------------------
     public function index()
     {
-        return view('coord.manage');
+        return view('coord.coordination_manage');
     }
 
     // ------------------------------------------------
@@ -33,8 +33,57 @@ class CoordinationController extends Controller
 
     public function storeMaster(Request $request)
     {
-        // ★ここに保存処理を書く（後ほど実装）
-        // ...
+        $userId = Auth::user()->USER_ID;
+        
+        // 1. バリデーション
+        $request->validate([
+            'clothing_ids' => 'required|array|min:1', // 服は最低1つ
+        ]);
+
+        // 2. 画像保存
+        $imagePath = null;
+        if ($request->hasFile('coord_image')) {
+            // public/storage/coords フォルダに保存
+            $imagePath = $request->file('coord_image')->store('coords', 'public');
+        }
+
+        // 3. タグのJSON化
+        $tagsInput = $request->input('tags');
+        $tagsJson = $tagsInput ? json_encode(explode(',', $tagsInput), JSON_UNESCAPED_UNICODE) : null;
+
+        // 4. お気に入り
+        $isFavorite = $request->has('is_favorite') ? 1 : 0;
+
+        // 5. ID生成 (CO + 日時 + ランダム)
+        $codeId = 'CO' . date('ymdHis') . Str::random(2);
+        
+        // コーデ名 (自動生成: 2026-01-26のマスターコーデ)
+        $codeName = date('Y-m-d') . 'のマスターコーデ';
+
+        // 6. トランザクションで保存
+        DB::transaction(function () use ($userId, $codeId, $codeName, $imagePath, $tagsJson, $isFavorite, $request) {
+            
+            // CODEテーブルへ保存
+            DB::table('CODE')->insert([
+                'CODE_ID'     => $codeId,
+                'USER_ID'     => $userId,
+                'CODE_NAME'   => $codeName,
+                'IMAGE_PATH'  => $imagePath,
+                'TAGS'        => $tagsJson,
+                'IS_FAVORITE' => $isFavorite,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+
+            // WEAR_CODE (紐付け) テーブルへ保存
+            foreach ($request->clothing_ids as $wearId) {
+                DB::table('WEAR_CODE')->insert([
+                    'CODE_ID' => $codeId,
+                    'WEAR_ID' => $wearId
+                ]);
+            }
+        });
+
         return redirect()->route('coord.manage')->with('success', 'マスターコーデを登録しました！');
     }
 
