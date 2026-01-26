@@ -22,34 +22,30 @@
         .closet-item:hover { transform: translateY(-2px); border-color: #ddd; background-color: #fcfcfc; }
         .closet-header { font-size: 20px; font-weight: bold; color: #333; display: flex; align-items: center; }
         .favorite-display { color: #ff4d4d; margin-left: 10px; }
-        .closet-tags { margin: 8px 0 0 0; color: #666; font-size: 14px; }
+        
+        /* タグバッジのスタイル */
+        .closet-tags { margin: 8px 0 0 0; font-size: 14px; display: flex; flex-wrap: wrap; gap: 5px; }
+        .tag-badge {
+            background-color: #f0f0f0;
+            color: #555;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
         
         .flash-message {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #4CAF50;
-            color: white;
-            padding: 15px 30px;
-            border-radius: 5px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 9999;
-            opacity: 0;
-            visibility: hidden;
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: #4CAF50; color: white; padding: 15px 30px;
+            border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 9999; opacity: 0; visibility: hidden;
             transition: opacity 0.5s ease-in-out, visibility 0.5s;
         }
-        .flash-message.show {
-            visibility: visible;
-            opacity: 1;
-        }
+        .flash-message.show { visibility: visible; opacity: 1; }
     </style>
 </head>
 <body>
     @if(session('success'))
-        <div id="flash-popup" class="flash-message">
-            {{ session('success') }}
-        </div>
+        <div id="flash-popup" class="flash-message">{{ session('success') }}</div>
     @endif
 
     <div class="header-nav">
@@ -64,13 +60,21 @@
             @forelse($closets as $closet)
                 <a href="{{ route('closet.view', ['id' => $closet->CLOSET_ID]) }}" class="closet-item">
                     <div class="closet-header">
-                        <span style="margin-right: 8px;">📁</span>
+                        <span style="margin-right: 8px; font-size: 24px;">🚪</span>
                         {{ $closet->CLOSET_NAME }}
+                        
                         @if($closet->is_favorite)
                             <span class="favorite-display">❤</span>
                         @endif
                     </div>
-                    <p class="closet-tags">タグ: {{ $closet->tag_string }}</p>
+                    
+                    <div class="closet-tags">
+                        @forelse($closet->tags_array as $tag)
+                            <span class="tag-badge">{{ $tag }}</span>
+                        @empty
+                            <span style="color: #999; font-size: 12px;">タグなし</span>
+                        @endforelse
+                    </div>
                 </a>
             @empty
                 <div style="text-align: center; padding: 40px; color: #777;">

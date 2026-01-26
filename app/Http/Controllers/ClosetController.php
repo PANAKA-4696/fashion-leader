@@ -22,16 +22,18 @@ class ClosetController extends Controller
 
         foreach ($closets as $closet) {
             $closet->is_favorite = isset($closet->IS_FAVORITE) ? $closet->IS_FAVORITE : false;
-            $closet->tag_string = 'なし'; 
+            
+            // ▼▼ タグを配列として準備 ▼▼
+            $closet->tags_array = [];
             if (isset($closet->TAGS) && $closet->TAGS) {
-                $tags = json_decode($closet->TAGS, true);
-                if (is_array($tags)) {
-                    $closet->tag_string = implode(', ', $tags);
+                $decoded = json_decode($closet->TAGS, true);
+                if (is_array($decoded)) {
+                    $closet->tags_array = $decoded;
                 }
             }
         }
 
-        // ▼▼ 修正: 一覧用データを 'closet.closet_view' に渡す ▼▼
+        // 一覧画面 (ファイル名は環境に合わせて closet_view または closet_main)
         return view('closet.closet_view', ['closets' => $closets]);
     }
 
@@ -42,7 +44,6 @@ class ClosetController extends Controller
     {
         $userId = Auth::user()->USER_ID;
 
-        // クローゼット情報の取得
         $closet = DB::table('CLOSET')
             ->where('CLOSET_ID', $id)
             ->where('USER_ID', $userId)
@@ -50,14 +51,23 @@ class ClosetController extends Controller
 
         if (!$closet) abort(404);
 
-        // コーデ一覧を取得
+        // ▼▼ クローゼット自体のタグを配列化 ▼▼
+        $closet->tags_array = [];
+        if (isset($closet->TAGS) && $closet->TAGS) {
+            $decoded = json_decode($closet->TAGS, true);
+            if (is_array($decoded)) {
+                $closet->tags_array = $decoded;
+            }
+        }
+
+        // コーデ一覧
         $codes = DB::table('CLOSET_CODE')
             ->join('CODE', 'CLOSET_CODE.CODE_ID', '=', 'CODE.CODE_ID')
             ->where('CLOSET_CODE.CLOSET_ID', $id)
             ->select('CODE.*')
             ->get();
 
-        // 服データを取得
+        // 服データ取得
         $codeIds = $codes->pluck('CODE_ID');
         $wearsGrouped = DB::table('WEAR_CODE')
             ->join('WEAR', 'WEAR_CODE.WEAR_ID', '=', 'WEAR.WEAR_ID')
@@ -68,33 +78,46 @@ class ClosetController extends Controller
 
         foreach ($codes as $code) {
             $code->wears = $wearsGrouped->get($code->CODE_ID, collect([]));
-            $tagsArray = [];
+            $code->tags_array = [];
             if ($code->TAGS) {
                 $decoded = json_decode($code->TAGS, true);
-                if (is_array($decoded)) $tagsArray = $decoded;
+                if (is_array($decoded)) $code->tags_array = $decoded;
             }
-            $code->tags_array = $tagsArray;
         }
 
-        // ▼▼ 修正: 詳細用データを 'closet.closet_main' に渡す ▼▼
+        // 詳細画面
         return view('closet.closet_main', [
             'closet' => $closet,
             'codes'  => $codes
         ]);
     }
 
-    // 他のメソッド (create, store, edit, update, removeCoord) はそのままでOKですが
-    // 念のため省略せずに必要な場合はおっしゃってください
+    // --- 他のメソッド(create, store, edit, update, removeCoord)は変更なし ---
+    // (先ほど修正した store メソッドなどはそのまま残しておいてください)
     public function create() { return view('closet.closet_add'); }
     
     public function store(Request $request) {
         $userId = Auth::user()->USER_ID;
         $request->validate(['closet_name' => 'required']);
         $closetId = 'CL' . date('ymdHis') . Str::random(2);
+        
+        $tagsInput = $request->input('new_tag'); 
+        $tagsJson = null;
+        if ($tagsInput) {
+            $tagsArray = explode(',', $tagsInput);
+            $tagsJson = json_encode($tagsArray, JSON_UNESCAPED_UNICODE);
+        }
+
         DB::table('CLOSET')->insert([
-            'CLOSET_ID' => $closetId, 'USER_ID' => $userId,
-            'CLOSET_NAME' => $request->closet_name, 'created_at' => now(), 'updated_at' => now(),
+            'CLOSET_ID'   => $closetId,
+            'USER_ID'     => $userId,
+            'CLOSET_NAME' => $request->closet_name,
+            'TAGS'        => $tagsJson, // ★ここの // を消して有効化！
+            'IS_FAVORITE' => 0,         // ★ここの // も消して有効化！
+            'created_at'  => now(),
+            'updated_at'  => now(),
         ]);
+
         return redirect()->route('closet.main')->with('success', 'クローゼットを作成しました！');
     }
 
@@ -117,9 +140,6 @@ class ClosetController extends Controller
     public function removeCoord(Request $request) {
         $codeId = $request->input('code_id');
         DB::table('CLOSET_CODE')->where('CODE_ID', $codeId)->delete();
-        // 必要なら以下も有効化
-        // DB::table('WEAR_CODE')->where('CODE_ID', $codeId)->delete();
-        // DB::table('CODE')->where('CODE_ID', $codeId)->delete();
         return redirect()->back()->with('success', 'コーデを削除しました。');
     }
 }
