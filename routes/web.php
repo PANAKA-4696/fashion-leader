@@ -73,9 +73,9 @@ Route::middleware(['auth'])->group(function () {
     // 服の保存処理
     Route::post('/clothing/store', [ClothingController::class, 'store']);
     
-    // 服の削除処理
-    Route::delete('/clothing/{id}', [ClothingController::class, 'destroy']);
-    Route::get('/clothing/wear-delete', [MainController::class, 'wear_delete']); // 削除選択画面
+    // ▼▼ 修正箇所: URLを /main/coord_delete に変更 ▼▼
+    // 今日のコーデ削除
+    Route::post('/main/coord_delete', [MainController::class, 'deleteCoord']);
     
     // 服の編集画面・更新処理
     Route::get('/clothing/wear-item-change/{id}', [MainController::class, 'wear_item_change']);

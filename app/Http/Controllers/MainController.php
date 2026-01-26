@@ -312,15 +312,14 @@ class MainController extends Controller
         return redirect('/main/calendar')->with('success', 'コーデを保存しました！');
     }
 
-    // ▼ 今日のコーデ削除
+    // ▼ 今日のコーデ削除 (クリーンアップ付き)
     public function deleteCoord(Request $request)
     {
-        $date = $request->date;
-        // 変更後
         $userId = Auth::user()->USER_ID;
-
+        $date = $request->date;
         [$y, $m, $d] = explode('-', $date);
 
+        // 1. カレンダーIDを特定
         $calendarId = DB::table('CALENDAR')
             ->where('USER_ID', $userId)
             ->where('CAL_YEAR', $y)
@@ -329,10 +328,26 @@ class MainController extends Controller
             ->value('CALENDAR_ID');
 
         if ($calendarId) {
-            DB::table('TODAY_CODE')->where('CALENDAR_ID', $calendarId)->delete();
+            // 2. 紐付いている CODE_ID を取得
+            $codeId = DB::table('TODAY_CODE')
+                ->where('CALENDAR_ID', $calendarId)
+                ->value('CODE_ID');
+
+            if ($codeId) {
+                DB::transaction(function () use ($calendarId, $codeId) {
+                    // (A) カレンダーとの紐付けを解除
+                    DB::table('TODAY_CODE')->where('CALENDAR_ID', $calendarId)->delete();
+
+                    // (B) 服との紐付けを削除
+                    DB::table('WEAR_CODE')->where('CODE_ID', $codeId)->delete();
+
+                    // (C) コーデ本体を削除 (これでゴミが残りません)
+                    DB::table('CODE')->where('CODE_ID', $codeId)->delete();
+                });
+            }
         }
 
-        return redirect('/main/calendar');
+        return redirect('/main/calendar')->with('success', 'コーデを削除しました。');
     }
 
     // 服マスター管理画面を表示する命令
