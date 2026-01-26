@@ -1,165 +1,270 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>コーデ変更画面</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>マスターコーデ編集</title>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <style>
-        .search-box { margin-bottom: 15px; width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .error-message { color: red; font-size: 12px; display: none; margin-bottom: 10px; }
-        .tag-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
-        .tag-item { background: #eee; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+        .item-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .item {
+            width: 100px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            padding: 5px;
+            transition: 0.2s;
+            position: relative;
+        }
+        .item:has(input:checked) {
+            border-color: #d32f2f;
+            background-color: #ffebee;
+        }
+        .item img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            background-color: #f5f5f5;
+        }
+        .item p {
+            font-size: 12px;
+            margin: 5px 0 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .item input[type="checkbox"] {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            transform: scale(1.2);
+        }
+        /* 入力フォーム周りのスタイル調整 */
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            margin-top: 15px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
     <div class="header-nav">
-        <h1>コーデ変更（編集）</h1>
-        <a href="/coord/choice">コーデ選択へ</a>
+        <h1>マスターコーデ編集</h1>
+        <a href="{{ route('coord.choice') }}">一覧へ戻る</a>
     </div>
 
     <div class="container">
-        <p>新しい服（マスターデータ）をアプリに登録します。</p>
-        <p style="font-size: 14px; color: #555;">（コーデの「原型」を登録・管理する場合は「コーデマスター管理」から行います）</p>
-        
-        <form action="/coord/update" method="POST" id="codeForm" enctype="multipart/form-data">
+        <p>登録済みのマスターコーデの内容を変更します。</p>
+
+        <form action="{{ route('coord.update', $coord->CODE_ID) }}" method="POST" enctype="multipart/form-data">
             @csrf
+            @method('PUT') <label for="coord_image">全体写真 (任意):</label>
+            <input type="file" id="coord_image" name="coord_image" accept="image/*" onchange="previewImage(event)">
             
-            <label for="coord_image">全体写真 (任意):</label>
-            <input type="file" id="coord_image" name="coord_image" accept="image/jpeg,image/png" onchange="previewImage(event, 'imagePreviewFull')">
-            <div class="preview-box">
-                <img id="imagePreviewFull" src="" alt="画像プレビュー" class="preview-img" style="display:none; border: 1px solid #ccc;">
+            <div class="preview-box" style="margin-top: 10px;">
+                @php
+                    // 画像があればパスをセット
+                    $initialSrc = $coord->IMAGE_PATH ? asset('storage/' . $coord->IMAGE_PATH) : '';
+                    $hasImage = !empty($coord->IMAGE_PATH);
+                @endphp
+                
+                <img id="imagePreview" 
+                    src="{{ $initialSrc }}" 
+                    alt="画像プレビュー" 
+                    class="preview-img" 
+                    style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px; {{ $hasImage ? 'display: block;' : 'display: none;' }}">
             </div>
-            <br>
 
-            <label for="tag_input">コーデのタグ:</label>
-            <input type="text" id="tag_input" placeholder="例：春のデートコーデ(Enterで追加)">
+            <label for="code_name">コーデ名 (任意):</label>
+            <input type="text" id="code_name" name="code_name" 
+                value="{{ $coord->CODE_NAME }}" 
+                placeholder="例：お気に入りデート服、面接用スーツなど">
+            <p style="font-size: 0.8rem; color: #666; margin-top: 2px;">※空欄の場合、タグ名または現在の日付が名前になります。</p>
+
+            <label for="tag_input">タグ:</label>
+            <input type="text" id="tag_input" placeholder="例：春, デート (Enterで追加)">
+            <input type="hidden" id="tags" name="tags" value="">
+            
             <div id="tagContainer" class="tag-container"></div>
-            <input type="hidden" name="tags" id="hidden_tags">
-            <br>
 
-            <label>コーデに使う服を選択してください:</label>
-            <input type="text" id="itemSearch" class="search-box" placeholder="服を検索...">
+            <label for="wear_search">登録する服を選択:</label>
+            <input type="text" id="wear_search" placeholder="カテゴリや名前で検索..." onkeyup="filterClothes()">
             
-            <div id="itemValidationError" class="error-message">シャツ、パンツ、シューズは必須項目です。</div>
-
-            <div class="item-list" id="itemList">
-                <label class="item" data-category="shirt">
-                    <input type="checkbox" name="clothing_ids[]" value="101" data-category="shirt">
-                    <img src="{{ asset('images/sample_shirt.jpg') }}" alt="シャツ">
-                    <p>ストライプシャツ</p>
+            <div class="item-list" id="clothesList">
+                @forelse($wears as $wear)
+                <label class="item" data-category="{{ $wear->CATEGORY }}" data-name="{{ $wear->ITEM_NAME }}">
+                    <input type="checkbox" name="clothing_ids[]" value="{{ $wear->WEAR_ID }}"
+                        @if(in_array($wear->WEAR_ID, $usedWearIds)) checked @endif
+                    >
+                    
+                    @if($wear->IMAGE_PATH)
+                        <img src="{{ asset('storage/' . $wear->IMAGE_PATH) }}" alt="{{ $wear->CATEGORY }}">
+                    @else
+                        <img src="{{ asset('images/no_image.png') }}" alt="画像なし">
+                    @endif
+                    
+                    <p>{{ $wear->ITEM_NAME }}</p>
+                    <span style="font-size:10px; color:#666;">{{ $wear->CATEGORY }}</span>
                 </label>
-                <label class="item" data-category="pants">
-                    <input type="checkbox" name="clothing_ids[]" value="102" data-category="pants">
-                    <img src="{{ asset('images/sample_pants.jpg') }}" alt="パンツ">
-                    <p>チノパンツ</p>
-                </label>
-                <label class="item" data-category="shoes">
-                    <input type="checkbox" name="clothing_ids[]" value="103" data-category="shoes">
-                    <img src="{{ asset('images/sample_shoes.jpg') }}" alt="シューズ">
-                    <p>ローファー</p>
-                </label>
-                <label class="item" data-category="accessory">
-                    <input type="checkbox" name="clothing_ids[]" value="104" data-category="accessory">
-                    <img src="{{ asset('images/sample_acc.jpg') }}" alt="アクセサリー">
-                    <p>腕時計</p>
-                </label>
+                @empty
+                    <p style="padding: 20px;">登録された服がありません。</p>
+                @endforelse
             </div>
-            <br>
 
-            <label class="favorite-toggle-btn" for="favorite-toggle">
-                <input type="checkbox" id="favorite-toggle" name="is_favorite">
+            <hr>
+
+            <label class="favorite-toggle-btn @if($coord->IS_FAVORITE) favorited @endif" for="favorite-toggle">
+                <input type="checkbox" id="favorite-toggle" name="is_favorite"
+                    @if($coord->IS_FAVORITE) checked @endif
+                >
                 <span class="fav-icon">❤</span>
-                <span>このコーデをお気に入り登録</span>
+                <span>お気に入りに登録する</span>
             </label>
 
-            <input type="submit" value="コーデを登録する" class="primary">
-            
-            <a href="javascript:history.back();" class="button">キャンセル</a>
+            <div style="margin-top: 20px; text-align: center;">
+                <input type="submit" value="変更を保存する" class="primary" style="width: 100%; max-width: 300px;">
+                <br>
+                <a href="{{ route('coord.choice') }}" class="button" style="display: inline-block; margin-top: 10px; background-color: #ccc; color: #333; text-decoration: none; width: 100%; max-width: 300px; box-sizing: border-box; text-align: center;">キャンセル</a>
+            </div>
         </form>
     </div>
 
     <script>
-        // --- No.6 プレビュー機能 ---
-        function previewImage(event, previewId) {
-            const output = document.getElementById(previewId);
+        // 画像プレビュー
+        function previewImage(event) {
             const reader = new FileReader();
             reader.onload = function() {
+                const output = document.getElementById('imagePreview');
                 output.src = reader.result;
                 output.style.display = 'block';
             };
-            if (event.target.files[0]) {
+            if(event.target.files[0]){
                 reader.readAsDataURL(event.target.files[0]);
             }
         }
 
-        // --- No.8~9 タグ追加機能 ---
-        const tagInput = document.getElementById('tag_input');
-        const tagContainer = document.getElementById('tagContainer');
-        const hiddenTags = document.getElementById('hidden_tags');
+        // --- タグ機能 ---
         let tags = [];
+        
+        // ▼▼ 重要: サーバーから既存のタグを受け取って初期化 ▼▼
+        const existingTagsJson = @json($coord->TAGS ?: '[]');
+        
+        try {
+            const parsed = typeof existingTagsJson === 'string' ? JSON.parse(existingTagsJson) : existingTagsJson;
+            if (Array.isArray(parsed)) {
+                tags = parsed;
+            }
+        } catch (e) {
+            console.log('Tag parse error', e);
+        }
+        // ▲▲ ここまで初期化処理 ▲▲
+
+        const tagInput = document.getElementById('tag_input');
+        
+        // 初期表示更新
+        updateTagDisplay();
+        updateHiddenInput();
 
         tagInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                const tagValue = this.value.trim();
-                if (tagValue && !tags.includes(tagValue)) {
-                    tags.push(tagValue);
-                    const tagElem = document.createElement('span');
-                    tagElem.className = 'tag-item';
-                    tagElem.textContent = tagValue;
-                    tagContainer.appendChild(tagElem);
-                    hiddenTags.value = tags.join(',');
-                }
+                addTag(this.value);
                 this.value = '';
             }
         });
-
-        // --- No.11 検索機能 ---
-        document.getElementById('itemSearch').addEventListener('input', function(e) {
-            const query = e.target.value.toLowerCase();
-            document.querySelectorAll('.item').forEach(item => {
-                const name = item.querySelector('p').textContent.toLowerCase();
-                item.style.display = name.includes(query) ? 'flex' : 'none';
+        
+        function addTag(tag) {
+            const trimmedTag = tag.trim();
+            if (trimmedTag && !tags.includes(trimmedTag)) {
+                tags.push(trimmedTag);
+                updateTagDisplay();
+                updateHiddenInput();
+            }
+        }
+        
+        function removeTag(tag) {
+            tags = tags.filter(t => t !== tag);
+            updateTagDisplay();
+            updateHiddenInput();
+        }
+        
+        function updateTagDisplay() {
+            const container = document.getElementById('tagContainer');
+            container.innerHTML = '';
+            tags.forEach(tag => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'tag';
+                tagEl.innerHTML = `${tag} <span class="tag-delete" onclick="removeTag('${tag}')">×</span>`;
+                container.appendChild(tagEl);
             });
-        });
+        }
+        
+        function updateHiddenInput() {
+            document.getElementById('tags').value = tags.join(',');
+        }
 
-        // --- No.12 カテゴリー制限（シャツ・パンツ・シューズは1つまで） ---
-        const checkboxes = document.querySelectorAll('input[name="clothing_ids[]"]');
-        checkboxes.forEach(cb => {
-            cb.addEventListener('change', function() {
-                const category = this.dataset.category;
-                if (category !== 'accessory' && this.checked) {
-                    checkboxes.forEach(other => {
-                        if (other !== this && other.dataset.category === category) {
-                            other.checked = false;
-                        }
-                    });
+        // 服検索フィルタ
+        function filterClothes() {
+            const query = document.getElementById('wear_search').value.toLowerCase();
+            const items = document.querySelectorAll('#clothesList .item');
+            
+            items.forEach(item => {
+                const name = item.getAttribute('data-name').toLowerCase();
+                const category = item.getAttribute('data-category').toLowerCase();
+                if (name.includes(query) || category.includes(query)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
                 }
             });
-        });
+        }
 
-        // --- No.14 バリデーションチェック ---
-        document.getElementById('codeForm').addEventListener('submit', function(e) {
-            const selectedCategories = Array.from(document.querySelectorAll('input[name="clothing_ids[]"]:checked'))
-                                            .map(cb => cb.dataset.category);
-            
-            const required = ['shirt', 'pants', 'shoes'];
-            const hasAllRequired = required.every(req => selectedCategories.includes(req));
-
-            if (!hasAllRequired) {
-                e.preventDefault();
-                document.getElementById('itemValidationError').style.display = 'block';
-                alert('シャツ、パンツ、シューズは必須項目です。選択を確認してください。');
+        // お気に入りトグル
+        document.getElementById('favorite-toggle').addEventListener('change', function() {
+            const btn = this.closest('.favorite-toggle-btn');
+            if (this.checked) {
+                btn.classList.add('favorited');
+            } else {
+                btn.classList.remove('favorited');
             }
         });
 
-        // お気に入りボタンの表示トグル
-        document.getElementById('favorite-toggle').addEventListener('change', function() {
-            const btn = this.closest('.favorite-toggle-btn');
-            btn.querySelector('span:last-child').textContent = this.checked ? 'お気に入りに登録済み' : 'このコーデをお気に入り登録';
-            this.checked ? btn.classList.add('favorited') : btn.classList.remove('favorited');
+        // 検索ボックスでのEnter誤送信防止
+        document.getElementById('wear_search').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                return false;
+            }
         });
+
+        // コーデ名入力でのEnter誤送信防止
+        const codeNameInput = document.getElementById('code_name');
+        if (codeNameInput) {
+            codeNameInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        }
     </script>
 </body>
 </html>
