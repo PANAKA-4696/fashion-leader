@@ -69,16 +69,25 @@
         
         <form action="/main/closet_edit" method="POST" enctype="multipart/form-data" id="closetForm">
             @csrf
+            <input type="hidden" name="closet_id" value="{{ $date }}">
             <input type="hidden" name="date" value="{{ $date }}">
 
             <label for="coord_image">全体写真 (任意):</label>
-            <input type="file" id="coord_image" name="coord_image" accept="image/*" onchange="previewImage(event)">
-            <div class="preview-box">
-                @if(isset($existingCoord) && $existingCoord->IMAGE_PATH)
-                    <img id="imagePreview" src="{{ asset('storage/' . $existingCoord->IMAGE_PATH) }}" alt="登録済み画像" class="preview-img" style="display:block;">
-                @else
-                    <img id="imagePreview" src="" alt="画像プレビュー" class="preview-img" style="display:none;">
-                @endif
+            <input type="file" id="coord_image" name="coord_image" accept="image/*" onchange="previewImage(event, 'imagePreviewFull')">
+            
+            <div class="preview-box" style="margin-top: 10px;">
+                @php
+                    // すでに登録済みの画像があるかチェック
+                    $hasImage = isset($existingCoord) && !empty($existingCoord->IMAGE_PATH);
+                    // 画像パスを生成
+                    $initialSrc = $hasImage ? asset('storage/' . $existingCoord->IMAGE_PATH) : '';
+                @endphp
+
+                <img id="imagePreviewFull" 
+                    src="{{ $initialSrc }}" 
+                    alt="画像プレビュー" 
+                    class="preview-img" 
+                    style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px; {{ $hasImage ? 'display: block;' : 'display: none;' }}">
             </div>
             
             <br>
@@ -133,13 +142,16 @@
     </div>
 
     <script>
-        // 画像プレビュー
-        function previewImage(event) {
+        // ▼▼ 修正箇所: 引数(previewId)を受け取り、そのIDの画像を表示するように変更 ▼▼
+        function previewImage(event, previewId) {
             const reader = new FileReader();
             reader.onload = function() {
-                const output = document.getElementById('imagePreview');
-                output.src = reader.result;
-                output.style.display = 'block';
+                // 引数で指定されたID (imagePreviewFull) を取得
+                const output = document.getElementById(previewId);
+                if (output) {
+                    output.src = reader.result;
+                    output.style.display = 'block';
+                }
             };
             if(event.target.files[0]){
                 reader.readAsDataURL(event.target.files[0]);
@@ -149,12 +161,10 @@
         // --- タグ機能 ---
         let tags = [];
         
-        // ★修正: サーバーから既存のタグを受け取って初期化
+        // サーバーから既存のタグを受け取って初期化
         const existingTagsJson = @json(isset($existingCoord) && $existingCoord->TAGS ? $existingCoord->TAGS : '[]');
         
         try {
-            // DBから取ったJSON文字列をパースして配列にする
-            // すでに配列で来ている場合と文字列の場合を考慮
             const parsed = typeof existingTagsJson === 'string' ? JSON.parse(existingTagsJson) : existingTagsJson;
             if (Array.isArray(parsed)) {
                 tags = parsed;
@@ -236,10 +246,10 @@
             }
         });
 
-        // ▼▼ 追加: 服検索ボックスでのEnterキーによる誤送信（保存）を防止 ▼▼
+        // 検索ボックスでのEnterキー誤送信防止
         document.getElementById('wear_search').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
-                e.preventDefault(); // 何もしない（送信を止める）
+                e.preventDefault();
                 return false;
             }
         });
