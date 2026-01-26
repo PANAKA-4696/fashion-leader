@@ -132,7 +132,6 @@
             }
         };
 
-        // 初期表示を現在の月に設定
         let currentDate = new Date();
 
         async function renderCalendar(date) {
@@ -165,7 +164,6 @@
 
                         if (dateStr === todayStr) cell.classList.add("today");
 
-                        // ▼ マス目はシンプルにアイコン表示（登録があれば）
                         if (monthlyStatus[dateStr] && (monthlyStatus[dateStr].isRegistered || monthlyStatus[dateStr].img)) {
                             const icon = document.createElement("div");
                             icon.className = "coord-icon";
@@ -184,7 +182,6 @@
             autoSelectCurrentDay();
         }
 
-        // ▼▼ 画像表示の修正箇所はここです ▼▼
         function selectDate(dateStr, status) {
             document.querySelectorAll(".calendar-table td").forEach(td => td.classList.remove("selected"));
             const target = document.querySelector(`td[data-date="${dateStr}"]`);
@@ -198,21 +195,17 @@
             const checkUrl = `/main/closet_clothes?date=${dateStr}`;
 
             if (!status || (!status.isRegistered && !status.img)) {
-                // まだ登録がない場合
                 previewContent.innerHTML = `<p style="color:#999;">コーデは未登録です</p>`;
                 actionContainer.innerHTML = `
                     <a href="${editUrl}" class="primary-btn">➕ コーデを登録する</a>
                 `;
             } else if (!status.img) {
-                // 登録はあるが画像がない場合
                 previewContent.innerHTML = `<p style="color:#999;">全体像は未登録です</p>`;
                 actionContainer.innerHTML = `
                     <a href="${checkUrl}" class="primary-btn">🔍 この日のコーデを確認</a>
                     <a href="${editUrl}" class="primary-btn">✏️ この日のコーデを変更</a>
                 `;
             } else {
-                // 画像がある場合（ここが修正ポイント！）
-                // src に "/storage/" を付けることで画像が表示されます
                 previewContent.innerHTML = `
                     <img src="/storage/${status.img}" style="max-height:200px; max-width:100%; border-radius:8px; border:1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
                 `;
@@ -222,7 +215,6 @@
                 `;
             }
         }
-        // ▲▲ 修正箇所終わり ▲▲
 
         function autoSelectCurrentDay() {
             const today = new Date();
@@ -230,7 +222,6 @@
             const todayCell = document.querySelector(`td[data-date="${todayStr}"]`);
             if (todayCell) todayCell.click();
             else {
-                // 今月表示で今日がない場合、1日を選択
                 const firstCell = document.querySelector('td[data-date]');
                 if (firstCell) firstCell.click();
             }
