@@ -186,7 +186,7 @@ class MainController extends Controller
         return response()->json($result);
     }
 
-    // ▼ 今日のコーデ登録処理
+    // ▼ 今日のコーデ登録・更新処理 (Upsert)
     public function saveCoord(Request $request)
     {
         $userId = Auth::user()->USER_ID;
@@ -199,69 +199,117 @@ class MainController extends Controller
         $tagsJson = $tagsInput ? json_encode(explode(',', $tagsInput), JSON_UNESCAPED_UNICODE) : null;
         $isFavorite = $request->has('is_favorite') ? 1 : 0;
 
-        // 画像保存処理
-        $imagePath = null;
-        if ($request->hasFile('coord_image')) {
-            $storedPath = $request->file('coord_image')->store('coord', 'public');
-            $imagePath = $storedPath;
-        }
-
-        // --- データ保存 ---
-
-        $codeId = 'C' . strtoupper(substr(uniqid(), -7));
-
-        // 1. CODE テーブルへの保存（ここには created_at があるのでOK）
-        DB::table('CODE')->insert([
-            'CODE_ID'     => $codeId,
-            'USER_ID'     => $userId,
-            'CODE_NAME'   => $date . ' のコーデ',
-            'IMAGE_PATH'  => $imagePath,
-            'TAGS'        => $tagsJson,
-            'IS_FAVORITE' => $isFavorite,
-            'created_at'  => now(),
-            'updated_at'  => now(),
-        ]);
-
-        // 2. WEAR_CODE テーブルへの保存
-        foreach ($wearIds as $wearId) {
-            DB::table('WEAR_CODE')->insert([
-                'CODE_ID' => $codeId,
-                'WEAR_ID' => $wearId
-            ]);
-        }
-
-        // 3. CALENDAR テーブルへの保存
-        $calendar = DB::table('CALENDAR')
-            ->where('USER_ID', $userId)
-            ->where('CAL_YEAR', $y)
-            ->where('CAL_MONTH', $m)
-            ->where('CAL_DATE', $d)
-            ->first();
-
-        if ($calendar) {
-            $calendarId = $calendar->CALENDAR_ID;
-        } else {
-            $calendarId = uniqid('CAL');
+        // トランザクション開始（一連の処理を一括で行う）
+        DB::transaction(function () use ($userId, $date, $y, $m, $d, $wearIds, $tagsJson, $isFavorite, $request) {
             
-            // ▼▼ 修正箇所: created_at, updated_at を削除しました ▼▼
-            DB::table('CALENDAR')->insert([
-                'CALENDAR_ID' => $calendarId,
-                'USER_ID'     => $userId,
-                'CAL_YEAR'    => $y,
-                'CAL_MONTH'   => $m,
-                'CAL_DATE'    => $d,
-                // created_at と updated_at は削除
-            ]);
-            // ▲▲ 修正箇所終わり ▲▲
-        }
+            // 1. まず、その日に既にコーデが紐付いているかを確認
+            // CALENDAR -> TODAY_CODE -> CODE
+            $existing = DB::table('CALENDAR')
+                ->join('TODAY_CODE', 'CALENDAR.CALENDAR_ID', '=', 'TODAY_CODE.CALENDAR_ID')
+                ->join('CODE', 'TODAY_CODE.CODE_ID', '=', 'CODE.CODE_ID')
+                ->where('CALENDAR.USER_ID', $userId)
+                ->where('CALENDAR.CAL_YEAR', $y)
+                ->where('CALENDAR.CAL_MONTH', $m)
+                ->where('CALENDAR.CAL_DATE', $d)
+                ->select('CODE.CODE_ID', 'CODE.IMAGE_PATH', 'CALENDAR.CALENDAR_ID')
+                ->first();
 
-        // 4. TODAY_CODE テーブルを更新
-        DB::table('TODAY_CODE')->updateOrInsert(
-            ['CALENDAR_ID' => $calendarId],
-            ['CODE_ID' => $codeId]
-        );
+            if ($existing) {
+                // ------------------------------------------------
+                // 【パターンA: 既に登録済みの場合 → 更新 (UPDATE)】
+                // ------------------------------------------------
+                $codeId = $existing->CODE_ID;
 
-        return redirect('/main/calendar')->with('success', 'コーデを登録しました！');
+                // 画像パスの準備（新画像があれば更新、なければ既存を維持）
+                $imagePath = $existing->IMAGE_PATH;
+                if ($request->hasFile('coord_image')) {
+                    $imagePath = $request->file('coord_image')->store('coord', 'public');
+                }
+
+                // CODEテーブル更新 (IDはそのまま、中身だけ書き換え)
+                DB::table('CODE')->where('CODE_ID', $codeId)->update([
+                    'CODE_NAME'   => $date . ' のコーデ',
+                    'IMAGE_PATH'  => $imagePath,
+                    'TAGS'        => $tagsJson,
+                    'IS_FAVORITE' => $isFavorite,
+                    'updated_at'  => now(),
+                ]);
+
+                // WEAR_CODE (服の紐付け) 更新
+                // 一旦、このコーデに紐付く服を全削除してから登録し直す
+                DB::table('WEAR_CODE')->where('CODE_ID', $codeId)->delete();
+                foreach ($wearIds as $wearId) {
+                    DB::table('WEAR_CODE')->insert([
+                        'CODE_ID' => $codeId,
+                        'WEAR_ID' => $wearId
+                    ]);
+                }
+
+            } else {
+                // ------------------------------------------------
+                // 【パターンB: まだ無い場合 → 新規作成 (INSERT)】
+                // ------------------------------------------------
+                
+                // 新規画像保存
+                $imagePath = null;
+                if ($request->hasFile('coord_image')) {
+                    $imagePath = $request->file('coord_image')->store('coord', 'public');
+                }
+
+                // 新しいCODE_ID
+                $codeId = 'C' . strtoupper(substr(uniqid(), -7));
+
+                // CODEテーブル登録
+                DB::table('CODE')->insert([
+                    'CODE_ID'     => $codeId,
+                    'USER_ID'     => $userId,
+                    'CODE_NAME'   => $date . ' のコーデ',
+                    'IMAGE_PATH'  => $imagePath,
+                    'TAGS'        => $tagsJson,
+                    'IS_FAVORITE' => $isFavorite,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+
+                // WEAR_CODE 登録
+                foreach ($wearIds as $wearId) {
+                    DB::table('WEAR_CODE')->insert([
+                        'CODE_ID' => $codeId,
+                        'WEAR_ID' => $wearId
+                    ]);
+                }
+
+                // CALENDARテーブルの確認・登録
+                $calendar = DB::table('CALENDAR')
+                    ->where('USER_ID', $userId)
+                    ->where('CAL_YEAR', $y)
+                    ->where('CAL_MONTH', $m)
+                    ->where('CAL_DATE', $d)
+                    ->first();
+
+                if ($calendar) {
+                    $calendarId = $calendar->CALENDAR_ID;
+                } else {
+                    $calendarId = uniqid('CAL');
+                    DB::table('CALENDAR')->insert([
+                        'CALENDAR_ID' => $calendarId,
+                        'USER_ID'     => $userId,
+                        'CAL_YEAR'    => $y,
+                        'CAL_MONTH'   => $m,
+                        'CAL_DATE'    => $d,
+                    ]);
+                }
+
+                // TODAY_CODE (紐付け) 登録
+                // ここは upsert でもいいですが、新規ルートなので insert で十分
+                DB::table('TODAY_CODE')->updateOrInsert(
+                    ['CALENDAR_ID' => $calendarId],
+                    ['CODE_ID' => $codeId]
+                );
+            }
+        });
+
+        return redirect('/main/calendar')->with('success', 'コーデを保存しました！');
     }
 
     // ▼ 今日のコーデ削除
