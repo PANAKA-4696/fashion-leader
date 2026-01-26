@@ -19,16 +19,16 @@ class CoordinationController extends Controller
         return view('coord.coordination_manage');
     }
 
-    // ------------------------------------------------
-    // 2. 新規保存画面 (coord_save)
-    // ------------------------------------------------
+    // ==========================================
+    // ▼ コーデマスター保存（新規作成）
+    // ==========================================
     public function createMaster()
     {
-        // 服データが必要になるはずなので取得して渡す
         $userId = Auth::user()->USER_ID;
         $wears = DB::table('WEAR')->where('USER_ID', $userId)->get();
 
-        return view('coord.coord_save', ['wears' => $wears]);
+        // 修正: ビュー名を 'coord.coordination_save' に変更
+        return view('coord.coordination_save', ['wears' => $wears]);
     }
 
     public function storeMaster(Request $request)
