@@ -1,13 +1,12 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth; // 追加
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\MainController;
 use App\Http\Controllers\CoordinationController;
 use App\Http\Controllers\ClosetController;
 use App\Http\Controllers\ClothingController;
 use App\Http\Controllers\AuthController;
-
 
 // --- モギ(リーダタナカ)担当場所（authの中やトップページ） ---
 
@@ -51,8 +50,9 @@ Route::middleware(['auth'])->group(function () {
     // 今日のコーデ確認画面
     Route::get('/main/closet_clothes', [MainController::class, 'closet_clothes']);
     
+    // ▼▼▼ 修正箇所：ここを 'main.closet.edit' に変更して、下のクローゼット編集と名前が被らないようにしました ▼▼▼
     // 今日のコーデ編集・登録画面
-    Route::get('/main/closet_edit', [MainController::class, 'closet_edit'])->name('closet.edit');
+    Route::get('/main/closet_edit', [MainController::class, 'closet_edit'])->name('main.closet.edit');
     Route::post('/main/closet_edit', [MainController::class, 'saveCoord']); // 保存処理
 
 
@@ -77,7 +77,6 @@ Route::middleware(['auth'])->group(function () {
     // 服の編集画面・更新処理
     Route::get('/clothing/wear-item-change/{id}', [MainController::class, 'wear_item_change']);
     Route::put('/clothing/{id}', [ClothingController::class, 'update']);
-    // (重複していたルート定義は削除しました)
 
 
     // --- フクシマ(リーダータナカ)担当場所（クローゼット管理） ---
@@ -92,16 +91,21 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/closet/add', [ClosetController::class, 'create'])->name('closet.add');
     Route::post('/closet/store', [ClosetController::class, 'store'])->name('closet.store');
     
-    // クローゼット編集・更新
+    // ▼▼▼ ここが本来の 'closet.edit' (クローゼットフォルダ編集) です ▼▼▼
+    // クローゼット編集画面の表示
     Route::get('/closet/edit/{id}', [ClosetController::class, 'edit'])->name('closet.edit');
+    
+    // クローゼット更新処理
     Route::post('/closet/update/{id}', [ClosetController::class, 'update'])->name('closet.update');
     
     // コーデ削除（紐付け解除）
     Route::post('/closet/coord/delete', [ClosetController::class, 'removeCoord'])->name('closet.coord.delete');
 
-    // ▼▼ 修正箇所: URLを /main/coord_delete に変更 ▼▼
-    // 今日のコーデ削除
+    // 今日のコーデ削除 (カレンダー画面用)
     Route::post('/main/coord_delete', [MainController::class, 'deleteCoord']);
+
+    // クローゼット削除処理
+    Route::post('/closet/delete/{id}', [ClosetController::class, 'destroy'])->name('closet.destroy');
 
 
     // --- リーダー田中担当場所（コーデ管理） ---
@@ -114,9 +118,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/coord/change/{id}', [CoordinationController::class, 'edit'])->name('coord.change');
     Route::put('/coord/update/{id}', [CoordinationController::class, 'update'])->name('coord.update');
 
-    // クローゼット内でのコーデ追加
-    Route::get('/closet/{closet_id}/add-code', [CoordinationController::class, 'create'])->name('closet.coord.add');
-    Route::post('/closet/code-store', [CoordinationController::class, 'store'])->name('closet.code.store');
+    // クローゼット内でのコーデ追加画面 (以前の定義があれば書き換え)
+    Route::get('/closet/{closet_id}/add-code', [ClosetController::class, 'addCoord'])->name('closet.coord.add');
+    
+    // コーデ保存処理 (新規・選択共通)
+    Route::post('/closet/code-store', [ClosetController::class, 'storeCode'])->name('closet.code.store');
 
     // --- オオタ(リーダータナカ)担当場所（コーデ管理） ---
 
