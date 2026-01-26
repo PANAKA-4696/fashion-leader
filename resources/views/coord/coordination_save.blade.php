@@ -221,6 +221,17 @@
                 return false;
             }
         });
+
+        // ▼▼ 追加: コーデ名入力でのEnter誤送信防止 ▼▼
+        const codeNameInput = document.getElementById('code_name');
+        if (codeNameInput) {
+            codeNameInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // 送信をキャンセル
+                    return false;
+                }
+            });
+        }
     </script>
 </body>
 </html>
